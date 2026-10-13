@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Usuários - ControleBoleto</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+    <div class="layout">
+        <!-- MENU LATERAL -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>ControleBoleto</h2>
+                <span>Sistema de Gestão</span>
+            </div>
+
+            <nav class="menu">
+                <a href="../index.html" class="menu-item">
+                    <span>▣</span> Dashboard
+                </a>
+
+                <div class="menu-group">
+                    <div class="menu-title">
+                        <span>▤</span> Cadastro
+                    </div>
+                    <a href="usuarios.html" class="active">Usuários</a>
+                    <a href="clientes.html">Clientes</a>
+                    <a href="boletos.html">Boletos</a>
+                </div>
+
+                <a href="cobrancas.html" class="menu-item">
+                    <span>◷</span> Cobranças
+                </a>
+
+                <div class="menu-group">
+                    <div class="menu-title">
+                        <span>🛡️</span> Auditoria
+                    </div>
+                    <a href="auditoria.html">Logs do Sistema</a>
+                </div>
+            </nav>
+
+            <div class="user-menu">
+                <div class="user-avatar">F</div>
+                <div class="user-info">
+                    <strong>Financeiro</strong>
+                    <span>Administrador</span>
+                </div>
+                <button type="button" class="logout" title="Sair">↪</button>
+            </div>
+        </aside>
+
+        <!-- CONTEÚDO PRINCIPAL -->
+        <main class="main">
+            <header class="header">
+                <div>
+                    <h1>Usuários</h1>
+                    <p>Gerenciamento de operadores e permissões do sistema</p>
+                </div>
+            </header>
+
+            <!-- APENAS O BOTÃO CADASTRAR USUÁRIO NO TOPO -->
+            <div id="botoesAcaoTopo" style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button type="button" id="btnNovoUsuario" style="background:#2563eb; color:white; border:none; padding: 10px 16px; border-radius:8px; cursor:pointer; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <span>➕</span> Cadastrar Usuário
+                </button>
+            </div>
+
+            <!-- BARRA DE BUSCA / FILTROS -->
+            <div id="secaoFiltros" class="panel" style="margin-bottom: 20px; padding: 15px;">
+                <div style="display: grid; grid-template-columns: 1fr 2fr 2fr 2fr; gap: 15px;">
+                    <input type="text" id="filtroCodigo" placeholder="Código (ID)" style="padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+                    <input type="text" id="filtroNome" placeholder="Buscar por Nome" style="padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+                    <input type="text" id="filtroUsuario" placeholder="Buscar por Usuário" style="padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+                    <select id="filtroSetor" style="padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+                        <option value="">Todos os Setores</option>
+                        <option value="Vendas">Vendas</option>
+                        <option value="Financeiro">Financeiro</option>
+                        <option value="Administrativo">Administrativo</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- PAINEL DE CADASTRO / EDIÇÃO EXPANDIDO -->
+            <div id="painelCadastroUsuario" class="panel" style="display:none; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 id="tituloPainelUsuario" style="color: #1e293b; margin: 0;">Cadastrar Novo Usuário</h3>
+                    <button type="button" id="btnVoltarUsuario" style="background: #64748b; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 14px;">⬅ Voltar</button>
+                </div>
+                <form id="formUsuario" style="display: flex; flex-direction: column; gap: 15px;">
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px;">
+                        <input type="text" id="nome" placeholder="Nome Completo" required style="padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+                        <input type="text" id="cpf" placeholder="CPF" required style="padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <input type="text" id="usuario" placeholder="Usuário (Login)" required style="padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+                        <input type="email" id="email" placeholder="E-mail" required style="padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <input type="password" id="senha" placeholder="Senha" style="padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+                        <input type="text" id="telefone" placeholder="Telefone" style="padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 3fr 1fr 2fr; gap: 15px;">
+                        <input type="text" id="endereco" placeholder="Endereço" style="padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+                        <input type="text" id="numero" placeholder="Número" style="padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+                        <input type="text" id="bairro" placeholder="Bairro" style="padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                        <select id="setor" style="padding:10px; border:1px solid #cbd5e1; border-radius:8px;" required>
+                            <option value="">Selecione o Setor</option>
+                            <option value="Vendas">Vendas</option>
+                            <option value="Financeiro">Financeiro</option>
+                        </select>
+                        <select id="permissao" style="padding:10px; border:1px solid #cbd5e1; border-radius:8px;" required>
+                            <option value="">Selecione</option>
+                            <option value="Operador">Operador</option>
+                            <option value="Vendedor">Vendedor</option>
+                        </select>
+                        <select id="status" style="padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+                            <option value="Ativo">Ativo</option>
+                            <option value="Inativo">Inativo</option>
+                        </select>
+                    </div>
+
+                    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
+                        <button type="button" id="cancelarUsuario" class="btn secondary" style="padding:10px 20px; border-radius:8px; cursor:pointer; background:#e2e8f0; border:none;">Cancelar</button>
+                        <button type="submit" class="btn primary" style="background:#2563eb; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:bold;">Salvar Usuário</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- TABELA DE USUÁRIOS -->
+            <div id="secaoTabela" class="panel">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 40px; text-align: center;"><input type="checkbox" id="selecionarTodos"></th>
+                                <th>ID</th>
+                                <th>Nome</th>
+                                <th>CPF</th>
+                                <th>Usuário (Login)</th>
+                                <th>Setor</th>
+                                <th>Perfil</th>
+                                <th>Status</th>
+                                <th style="text-align: center;">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaUsuarios">
+                            <tr>
+                                <td colspan="9" style="text-align: center; color: #64748b;">Carregando usuários...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../js/usuarios.js"></script>
+</body>
+</html>

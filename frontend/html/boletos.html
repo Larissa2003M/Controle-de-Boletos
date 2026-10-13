@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Boletos - ControleBoleto</title>
+
+    <link rel="stylesheet" href="../style.css">
+
+</head>
+
+<body>
+
+    <div class="layout">
+
+        <!-- MENU LATERAL -->
+        <aside class="sidebar">
+
+            <div class="logo">
+
+                <h2>ControleBoleto</h2>
+
+                <span>Sistema de Gestão</span>
+
+            </div>
+
+
+            <nav class="menu">
+
+                <a href="../index.html" class="menu-item">
+                    <span>▣</span> Dashboard
+                </a>
+
+
+                <div class="menu-group">
+
+                    <div class="menu-title">
+                        <span>▤</span> Cadastro
+                    </div>
+
+                    <a href="usuarios.html" id="menuUsuarios">
+                        Usuários
+                    </a>
+
+                    <a href="clientes.html">
+                        Clientes
+                    </a>
+
+                    <a
+                        href="boletos.html"
+                        class="active"
+                        id="menuBoletos"
+                    >
+                        Boletos
+                    </a>
+
+                </div>
+
+
+                <a href="cobrancas.html" class="menu-item">
+                    <span>◷</span> Cobranças
+                </a>
+
+
+                <div class="menu-group">
+
+                    <div class="menu-title">
+                        <span>🛡️</span> Auditoria
+                    </div>
+
+                    <a href="auditoria.html">
+                        Logs do Sistema
+                    </a>
+
+                </div>
+
+            </nav>
+
+
+            <div class="user-menu">
+
+                <div
+                    class="user-avatar"
+                    id="userAvatar"
+                >
+                    F
+                </div>
+
+                <div class="user-info">
+
+                    <strong id="userName">
+                        Financeiro
+                    </strong>
+
+                    <span id="userRole">
+                        Administrador
+                    </span>
+
+                </div>
+
+                <button
+                    type="button"
+                    id="btnLogout"
+                    class="logout"
+                    title="Sair"
+                >
+                    ↪
+                </button>
+
+            </div>
+
+        </aside>
+
+
+        <!-- CONTEÚDO PRINCIPAL -->
+        <main class="main">
+
+            <!-- CABEÇALHO -->
+            <header
+                class="header"
+                style="
+                    display:flex;
+                    justify-content:space-between;
+                    align-items:center;
+                    margin-bottom:20px;
+                "
+            >
+
+                <div>
+
+                    <h1>Boletos</h1>
+
+                    <p
+                        style="
+                            margin:4px 0 0 0;
+                            color:#64748b;
+                        "
+                    >
+                        Controle de boletos, vencimentos e pagamentos
+                    </p>
+
+                </div>
+
+
+                <!-- BOTÕES DO TOPO -->
+                <div
+                    style="
+                        display:flex;
+                        gap:10px;
+                    "
+                >
+
+                    <button
+                        type="button"
+                        id="btnImprimirRelatorio"
+                        onclick="gerarRelatorioBoletos()"
+                        style="
+                            background:#475569;
+                            color:white;
+                            border:none;
+                            padding:10px 18px;
+                            border-radius:8px;
+                            cursor:pointer;
+                            font-weight:600;
+                            font-size:14px;
+                            display:inline-flex;
+                            align-items:center;
+                            gap:8px;
+                            box-shadow:0 2px 4px rgba(0,0,0,0.1);
+                        "
+                    >
+                        <span>🖨️</span>
+                        Imprimir Relatório
+                    </button>
+
+
+                    <div id="containerBtnNovo">
+
+                        <button
+                            type="button"
+                            id="btnNovoBoleto"
+                            style="
+                                background:#2563eb;
+                                color:white;
+                                border:none;
+                                padding:10px 18px;
+                                border-radius:8px;
+                                cursor:pointer;
+                                font-weight:600;
+                                font-size:14px;
+                                display:inline-flex;
+                                align-items:center;
+                                gap:8px;
+                                box-shadow:0 2px 4px rgba(37,99,235,0.2);
+                            "
+                        >
+                            <span style="font-size:16px;">＋</span>
+                            Cadastrar Boleto
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </header>
+
+
+            <!-- AÇÕES EM MASSA -->
+            <div
+                id="botoesAcaoTopo"
+                style="
+                    display:flex;
+                    gap:10px;
+                    margin-bottom:15px;
+                "
+            >
+
+                <button
+                    type="button"
+                    id="btnMarcarPagosMassa"
+                    title="Marcar Selecionados como Pagos"
+                    style="
+                        background:#16a34a;
+                        color:white;
+                        border:none;
+                        padding:8px 14px;
+                        border-radius:8px;
+                        cursor:pointer;
+                        font-size:13px;
+                        font-weight:500;
+                    "
+                >
+                    ✅ Marcar Selecionados como Pagos
+                </button>
+
+
+                <button
+                    type="button"
+                    id="btnDarBaixaMassa"
+                    title="Dar Baixa nos Selecionados"
+                    style="
+                        background:#475569;
+                        color:white;
+                        border:none;
+                        padding:8px 14px;
+                        border-radius:8px;
+                        cursor:pointer;
+                        font-size:13px;
+                        font-weight:500;
+                    "
+                >
+                    📥 Dar Baixa em Lote
+                </button>
+
+            </div>
+
+
+            <!-- FILTROS -->
+            <div
+                id="secaoFiltros"
+                class="panel"
+                style="
+                    margin-bottom:20px;
+                    padding:15px;
+                "
+            >
+
+                <div
+                    style="
+                        display:grid;
+                        grid-template-columns:2fr 1fr 1fr;
+                        gap:15px;
+                    "
+                >
+
+                    <input
+                        type="text"
+                        id="filtroCliente"
+                        placeholder="Filtrar por Cliente"
+                        style="
+                            padding:10px;
+                            border:1px solid #cbd5e1;
+                            border-radius:8px;
+                        "
+                    >
+
+
+                    <input
+                        type="text"
+                        id="filtroNumero"
+                        placeholder="Nº do Boleto"
+                        style="
+                            padding:10px;
+                            border:1px solid #cbd5e1;
+                            border-radius:8px;
+                        "
+                    >
+
+
+                    <select
+                        id="filtroStatus"
+                        style="
+                            padding:10px;
+                            border:1px solid #cbd5e1;
+                            border-radius:8px;
+                        "
+                    >
+
+                        <option value="">
+                            Todos os Status
+                        </option>
+
+                        <option value="Pendente">
+                            Pendente
+                        </option>
+
+                        <option value="Pago">
+                            Pago
+                        </option>
+
+                        <option value="Vencido">
+                            Vencido
+                        </option>
+
+                        <option value="Baixa">
+                            Baixa
+                        </option>
+
+                    </select>
+
+                </div>
+
+            </div>
+
+
+            <!-- CADASTRO / EDIÇÃO -->
+            <div
+                id="painelCadastroBoleto"
+                class="panel"
+                style="
+                    display:none;
+                    margin-bottom:20px;
+                "
+            >
+
+                <div
+                    style="
+                        display:flex;
+                        justify-content:space-between;
+                        align-items:center;
+                        margin-bottom:15px;
+                    "
+                >
+
+                    <h3
+                        id="tituloPainelBoleto"
+                        style="
+                            color:#1e293b;
+                            margin:0;
+                        "
+                    >
+                        Cadastrar Novo Boleto
+                    </h3>
+
+
+                    <button
+                        type="button"
+                        id="btnVoltarBoleto"
+                        style="
+                            background:#64748b;
+                            color:white;
+                            border:none;
+                            padding:6px 14px;
+                            border-radius:6px;
+                            cursor:pointer;
+                            font-size:14px;
+                        "
+                    >
+                        ⬅ Voltar
+                    </button>
+
+                </div>
+
+
+                <form
+                    id="formBoleto"
+                    style="
+                        display:flex;
+                        flex-direction:column;
+                        gap:15px;
+                    "
+                >
+
+                    <!-- CLIENTE -->
+                    <div>
+
+                        <label
+                            style="
+                                font-size:12px;
+                                color:#64748b;
+                                display:block;
+                                margin-bottom:3px;
+                            "
+                        >
+                            Cliente
+                        </label>
+
+                        <input
+                            type="text"
+                            id="razaoSocialBoleto"
+                            list="listaClientesSugestoes"
+                            placeholder="Digite ou selecione o Cliente"
+                            required
+                            style="
+                                padding:10px;
+                                border:1px solid #cbd5e1;
+                                border-radius:8px;
+                                width:100%;
+                            "
+                        >
+
+                        <datalist
+                            id="listaClientesSugestoes"
+                        ></datalist>
+
+                    </div>
+
+
+                    <!-- DADOS DO PAGADOR -->
+                    <div
+                        style="
+                            background:#f8fafc;
+                            border:1px solid #e2e8f0;
+                            border-radius:8px;
+                            padding:15px;
+                        "
+                    >
+
+                        <strong
+                            style="
+                                display:block;
+                                margin-bottom:12px;
+                                color:#334155;
+                            "
+                        >
+                            Dados do Pagador
+                        </strong>
+
+
+                        <div
+                            style="
+                                display:grid;
+                                grid-template-columns:1fr 2fr 1fr 1fr;
+                                gap:15px;
+                            "
+                        >
+
+                            <!-- CPF / CNPJ -->
+                            <div>
+
+                                <label
+                                    style="
+                                        font-size:12px;
+                                        color:#64748b;
+                                        display:block;
+                                        margin-bottom:3px;
+                                    "
+                                >
+                                    CPF / CNPJ
+                                </label>
+
+                                <input
+                                    type="text"
+                                    id="cpfCnpjPagador"
+                                    readonly
+                                    style="
+                                        padding:10px;
+                                        border:1px solid #cbd5e1;
+                                        border-radius:8px;
+                                        width:100%;
+                                        background:#f1f5f9;
+                                    "
+                                >
+
+                            </div>
+
+
+                            <!-- ENDEREÇO -->
+                            <div>
+
+                                <label
+                                    style="
+                                        font-size:12px;
+                                        color:#64748b;
+                                        display:block;
+                                        margin-bottom:3px;
+                                    "
+                                >
+                                    Endereço
+                                </label>
+
+                                <input
+                                    type="text"
+                                    id="enderecoPagador"
+                                    readonly
+                                    style="
+                                        padding:10px;
+                                        border:1px solid #cbd5e1;
+                                        border-radius:8px;
+                                        width:100%;
+                                        background:#f1f5f9;
+                                    "
+                                >
+
+                            </div>
+
+
+                            <!-- NÚMERO -->
+                            <div>
+
+                                <label
+                                    style="
+                                        font-size:12px;
+                                        color:#64748b;
+                                        display:block;
+                                        margin-bottom:3px;
+                                    "
+                                >
+                                    Número
+                                </label>
+
+                                <input
+                                    type="text"
+                                    id="numeroPagador"
+                                    readonly
+                                    style="
+                                        padding:10px;
+                                        border:1px solid #cbd5e1;
+                                        border-radius:8px;
+                                        width:100%;
+                                        background:#f1f5f9;
+                                    "
+                                >
+
+                            </div>
+
+
+                            <!-- CEP -->
+                            <div>
+
+                                <label
+                                    style="
+                                        font-size:12px;
+                                        color:#64748b;
+                                        display:block;
+                                        margin-bottom:3px;
+                                    "
+                                >
+                                    CEP
+                                </label>
+
+                                <input
+                                    type="text"
+                                    id="cepPagador"
+                                    readonly
+                                    style="
+                                        padding:10px;
+                                        border:1px solid #cbd5e1;
+                                        border-radius:8px;
+                                        width:100%;
+                                        background:#f1f5f9;
+                                    "
+                                >
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- DADOS DO BOLETO -->
+                    <div
+                        style="
+                            display:grid;
+                            grid-template-columns:1fr 1fr;
+                            gap:15px;
+                        "
+                    >
+
+                        <!-- DATA DE EMISSÃO -->
+                        <div>
+
+                            <label
+                                style="
+                                    font-size:12px;
+                                    color:#64748b;
+                                    display:block;
+                                    margin-bottom:3px;
+                                "
+                            >
+                                Data de Emissão
+                            </label>
+
+                            <input
+                                type="date"
+                                id="dataEmissao"
+                                required
+                                style="
+                                    padding:10px;
+                                    border:1px solid #cbd5e1;
+                                    border-radius:8px;
+                                    width:100%;
+                                "
+                            >
+
+                        </div>
+
+
+                        <!-- QUANTIDADE DE BOLETOS -->
+                        <div>
+
+                            <label
+                                style="
+                                    font-size:12px;
+                                    color:#64748b;
+                                    display:block;
+                                    margin-bottom:3px;
+                                "
+                            >
+                                Quantidade de Boletos / Parcelas
+                            </label>
+
+                            <input
+                                type="number"
+                                id="qtdParcelas"
+                                min="1"
+                                max="12"
+                                value="1"
+                                required
+                                style="
+                                    padding:10px;
+                                    border:1px solid #cbd5e1;
+                                    border-radius:8px;
+                                    width:100%;
+                                "
+                            >
+
+                        </div>
+
+                    </div>
+
+
+                    <!--
+                        O JAVASCRIPT CRIA AQUI:
+                        NÚMERO DO BOLETO
+                        VALOR
+                        VENCIMENTO
+                    -->
+                    <div id="containerDatasParcelas"></div>
+
+
+                    <!-- OBSERVAÇÕES -->
+                    <div>
+
+                        <label
+                            style="
+                                font-size:12px;
+                                color:#64748b;
+                                display:block;
+                                margin-bottom:3px;
+                            "
+                        >
+                            Observações
+                        </label>
+
+                        <textarea
+                            id="instrucoesBoleto"
+                            rows="3"
+                            placeholder="Observações sobre o boleto"
+                            style="
+                                padding:10px;
+                                border:1px solid #cbd5e1;
+                                border-radius:8px;
+                                width:100%;
+                                resize:vertical;
+                            "
+                        ></textarea>
+
+                    </div>
+
+
+                    <!-- BOTÕES -->
+                    <div
+                        style="
+                            display:flex;
+                            justify-content:flex-end;
+                            gap:10px;
+                            margin-top:10px;
+                        "
+                    >
+
+                        <button
+                            type="button"
+                            id="cancelarBoleto"
+                            style="
+                                padding:10px 20px;
+                                border-radius:8px;
+                                cursor:pointer;
+                                background:#e2e8f0;
+                                color:#334155;
+                                border:none;
+                                font-weight:500;
+                            "
+                        >
+                            Cancelar
+                        </button>
+
+
+                        <button
+                            type="submit"
+                            id="btnSalvarBoleto"
+                            style="
+                                background:#2563eb;
+                                color:white;
+                                border:none;
+                                padding:10px 20px;
+                                border-radius:8px;
+                                cursor:pointer;
+                                font-weight:600;
+                            "
+                        >
+                            Salvar Boleto
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+
+            <!-- TABELA DE BOLETOS -->
+            <div
+                id="secaoTabela"
+                class="panel"
+            >
+
+                <div class="table-container">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+
+                                <th
+                                    style="
+                                        width:40px;
+                                        text-align:center;
+                                    "
+                                >
+                                    <input
+                                        type="checkbox"
+                                        id="selecionarTodos"
+                                    >
+                                </th>
+
+                                <th>ID</th>
+
+                                <th>
+                                    Razão Social / Cliente
+                                </th>
+
+                                <th>
+                                    Nº Boleto
+                                </th>
+
+                                <th>
+                                    Valor
+                                </th>
+
+                                <th>
+                                    Emissão
+                                </th>
+
+                                <th>
+                                    Vencimento
+                                </th>
+
+                                <th>
+                                    Status
+                                </th>
+
+                                <th style="text-align:center;">
+                                    Ação
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody id="listaBoletos">
+
+                            <tr>
+
+                                <td
+                                    colspan="9"
+                                    style="
+                                        text-align:center;
+                                        color:#64748b;
+                                    "
+                                >
+                                    Carregando boletos...
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </main>
+
+    </div>
+
+
+    <script src="../js/boletos.js"></script>
+
+</body>
+
+</html>

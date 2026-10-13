@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auditoria - ControleBoleto</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+    <div class="layout">
+        <!-- MENU LATERAL -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>ControleBoleto</h2>
+                <span>Sistema de Gestão</span>
+            </div>
+
+            <nav class="menu">
+                <a href="../index.html" class="menu-item">
+                    <span>▣</span> Dashboard
+                </a>
+
+                <div class="menu-group">
+                    <div class="menu-title">
+                        <span>▤</span> Cadastro
+                    </div>
+                    <a href="usuarios.html">Usuários</a>
+                    <a href="clientes.html">Clientes</a>
+                    <a href="boletos.html">Boletos</a>
+                </div>
+
+                <a href="cobrancas.html" class="menu-item">
+                    <span>◷</span> Cobranças
+                </a>
+
+                <div class="menu-group">
+                    <div class="menu-title">
+                        <span>🛡️</span> Auditoria
+                    </div>
+                    <a href="auditoria.html" class="active">Logs do Sistema</a>
+                </div>
+            </nav>
+
+            <div class="user-menu">
+                <div class="user-avatar" id="userAvatar">F</div>
+                <div class="user-info">
+                    <strong id="userName">Financeiro</strong>
+                    <span id="userRole">Administrador</span>
+                </div>
+                <button type="button" id="btnLogout" class="logout" title="Sair">↪</button>
+            </div>
+        </aside>
+
+        <!-- CONTEÚDO PRINCIPAL -->
+        <main class="main">
+            <header class="header" style="margin-bottom: 20px;">
+                <h1>Auditoria e Logs</h1>
+                <p style="margin: 4px 0 0 0; color: #64748b;">Monitore as atividades e acessos realizados no sistema</p>
+            </header>
+
+            <!-- TABELA DE LOGS -->
+            <div class="panel">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Usuário</th>
+                                <th>Ação / Descrição</th>
+                                <th>Data e Hora</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listaAuditoria">
+                            <tr>
+                                <td colspan="4" style="text-align: center; color: #64748b;">Carregando logs de auditoria...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+   
+    <script src="../js/auditoria.js"></script>
+</body>
+</html>

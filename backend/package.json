@@ -1,0 +1,13 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "Servidor ControleBoleto",
+  "main": "server.js",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "express-fileupload": "^1.5.2",
+    "mysql2": "^3.9.2",
+    "pdfkit": "^0.20.2"
+  }
+}

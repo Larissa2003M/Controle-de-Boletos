@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - ControleBoleto</title>
+    <link rel="stylesheet" href="style.css">
+    
+</head>
+
+<body>
+
+    <div class="layout">
+
+        <!-- ==============================
+              MENU LATERAL
+        =============================== -->
+        <aside class="sidebar">
+
+            <!-- LOGO -->
+            <div class="logo">
+                <h2>ControleBoleto</h2>
+                <span>Sistema de Gestão</span>
+            </div>
+
+            <!-- MENU -->
+            <nav class="menu">
+                <!-- DASHBOARD -->
+                <a href="index.html" class="menu-item active">
+                    <span>▣</span>
+                    Dashboard
+                </a>
+
+                <!-- CADASTRO (Retraído por padrão) -->
+                <div class="menu-group" id="grupoCadastro">
+                    <div class="menu-title" onclick="toggleMenu('grupoCadastro')">
+                        <span>▤ Cadastro</span>
+                        <span>▾</span>
+                    </div>
+                    <div class="menu-subitems">
+                        <a href="html/usuarios.html">Usuários</a>
+                        <a href="html/clientes.html">Clientes</a>
+                        <a href="html/boletos.html">Boletos</a>
+                    </div>
+                </div>
+
+                <!-- COBRANÇAS -->
+                <a href="html/cobrancas.html" class="menu-item">
+                    <span>◷</span>
+                    Cobranças
+                </a>
+
+                <!-- AUDITORIA -->
+                <div class="menu-group" id="grupoAuditoria">
+                    <div class="menu-title" onclick="toggleMenu('grupoAuditoria')">
+                        <span>🛡️ Auditoria</span>
+                        <span>▾</span>
+                    </div>
+                    <div class="menu-subitems">
+                        <a href="html/auditoria.html">Logs do Sistema</a>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- ==============================
+                 USUÁRIO LOGADO
+            =============================== -->
+            <div class="user-menu">
+                <div class="user-avatar" id="userAvatar">
+                    F
+                </div>
+
+                <div class="user-info">
+                    <strong id="userName">
+                        Financeiro
+                    </strong>
+                    <span id="userRole">
+                        Administrador
+                    </span>
+                </div>
+
+                <button type="button" class="logout" id="btnLogout" title="Sair">
+                    ↪
+                </button>
+            </div>
+
+        </aside>
+
+        <!-- ==============================
+             CONTEÚDO
+        =============================== -->
+        <main class="main">
+
+            <!-- CABEÇALHO -->
+            <header class="header">
+                <div>
+                    <h1>
+                        Dashboard
+                    </h1>
+                    <p>
+                        Visão geral dos boletos e cobranças
+                    </p>
+                </div>
+
+                <div class="header-actions">
+                    <span class="date"></span>
+
+                    <button type="button" class="notification" title="Notificações">
+                        🔔
+                    </button>
+                </div>
+            </header>
+
+            <!-- ==============================
+                 CARDS
+            =============================== -->
+            <section class="cards">
+
+                <!-- TOTAL -->
+                <div class="card">
+                    <div class="card-icon">
+                        📄
+                    </div>
+
+                    <div class="card-content">
+                        <span>
+                            Total de Boletos
+                        </span>
+                        <strong id="cardTotalQtd">
+                            0
+                        </strong>
+                        <small>
+                            cadastrados
+                        </small>
+                    </div>
+                </div>
+
+                <!-- PENDENTES -->
+                <div class="card">
+                    <div class="card-icon">
+                        ⏳
+                    </div>
+
+                    <div class="card-content">
+                        <span>
+                            Pendentes
+                        </span>
+                        <strong id="cardPendentesQtd">
+                            0
+                        </strong>
+                        <small>
+                            aguardando pagamento
+                        </small>
+                    </div>
+                </div>
+
+                <!-- PAGOS -->
+                <div class="card">
+                    <div class="card-icon">
+                        ✓
+                    </div>
+
+                    <div class="card-content">
+                        <span>
+                            Pagos
+                        </span>
+                        <strong id="cardPagosQtd">
+                            0
+                        </strong>
+                        <small>
+                            boletos pagos
+                        </small>
+                    </div>
+                </div>
+
+                <!-- VENCIDOS -->
+                <div class="card">
+                    <div class="card-icon">
+                        !
+                    </div>
+
+                    <div class="card-content">
+                        <span>
+                            Vencidos
+                        </span>
+                        <strong id="cardVencidosQtd">
+                            0
+                        </strong>
+                        <small>
+                            necessitam atenção
+                        </small>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- ==============================
+                 BOLETOS E COBRANÇAS
+            =============================== -->
+            <section class="dashboard-grid">
+
+                <!-- PRÓXIMOS VENCIMENTOS -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>
+                                Próximos vencimentos
+                            </h2>
+                            <p>
+                                Boletos que precisam de acompanhamento
+                            </p>
+                        </div>
+
+                        <a href="html/boletos.html">
+                            Ver todos
+                        </a>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Vencimento</th>
+                                    <th>Valor</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="tabelaProximosVencimentos">
+                                <tr>
+                                    <td colspan="4" style="text-align: center; color: #64748b;">Carregando...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ==============================
+                     COBRANÇAS
+                =============================== -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <div>
+                            <h2>
+                                Cobranças
+                            </h2>
+                            <p>
+                                Acompanhamento dos clientes
+                            </p>
+                        </div>
+
+                        <a href="#">
+                            Ver todas
+                        </a>
+                    </div>
+
+                    <div class="collection-list" id="listaCobrancasDashboard">
+                        <div class="collection">
+                            <div class="collection-info">
+                                <span>Nenhum boleto vencido para cobrança.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- ==============================
+                 RESUMO FINANCEIRO
+            =============================== -->
+            <section class="summary">
+                <div class="summary-header">
+                    <div>
+                        <h2>
+                            Resumo financeiro
+                        </h2>
+                        <p>
+                            Valores dos boletos cadastrados
+                        </p>
+                    </div>
+                </div>
+
+                <div class="summary-grid">
+
+                    <div class="summary-item">
+                        <span>
+                            Total
+                        </span>
+                        <strong id="summaryTotalValor">
+                            R$ 0,00
+                        </strong>
+                    </div>
+
+                    <div class="summary-item">
+                        <span>
+                            Pagos
+                        </span>
+                        <strong id="summaryPagosValor">
+                            R$ 0,00
+                        </strong>
+                    </div>
+
+                    <div class="summary-item">
+                        <span>
+                            Pendentes
+                        </span>
+                        <strong id="summaryPendentesValor">
+                            R$ 0,00
+                        </strong>
+                    </div>
+
+                    <div class="summary-item">
+                        <span>
+                            Vencidos
+                        </span>
+                        <strong id="summaryVencidosValor">
+                            R$ 0,00
+                        </strong>
+                    </div>
+
+                </div>
+            </section>
+
+        </main>
+
+    </div>
+
+    <script src="dashboard.js"></script>
+
+</body>
+
+</html>

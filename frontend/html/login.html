@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - ControleBoleto</title>
+    <link rel="stylesheet" href="../style.css">
+</head>
+<body>
+
+    <div class="login-container">
+        <!-- PAINEL ESQUERDO -->
+        <section class="login-left">
+            <div class="circle circle-one"></div>
+            <div class="circle circle-two"></div>
+            <div class="circle circle-three"></div>
+            <div class="dots"></div>
+            <div class="dots-bottom"></div>
+
+            <div class="left-content">
+                <div class="illustration">
+                    <!-- NOTEBOOK -->
+                    <div class="laptop">
+                        <div class="laptop-screen">
+                            <div class="browser-bar">
+                                <span class="browser-dot"></span>
+                                <span class="browser-dot"></span>
+                                <span class="browser-dot"></span>
+                            </div>
+                            <div class="mini-dashboard">
+                                <div class="mini-sidebar">
+                                    <div class="mini-menu-line active"></div>
+                                    <div class="mini-menu-line"></div>
+                                    <div class="mini-menu-line"></div>
+                                    <div class="mini-menu-line"></div>
+                                </div>
+                                <div class="mini-content">
+                                    <div class="mini-title">Controle de Boletos</div>
+                                    <div class="mini-cards">
+                                        <div class="mini-card blue"></div>
+                                        <div class="mini-card light"></div>
+                                        <div class="mini-card dark"></div>
+                                    </div>
+                                    <div class="mini-chart">
+                                        <div class="chart-bar one"></div>
+                                        <div class="chart-bar two"></div>
+                                        <div class="chart-bar three"></div>
+                                        <div class="chart-bar four"></div>
+                                        <div class="chart-bar five"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="laptop-base"></div>
+
+                    <!-- BOLETO -->
+                    <div class="boleto">
+                        <div class="boleto-header">
+                            <span>BOLETO</span>
+                            <div class="boleto-icon">$</div>
+                        </div>
+                        <div class="boleto-line"></div>
+                        <div class="boleto-line small"></div>
+                        <div class="boleto-value">R$ 850,00</div>
+                        <div class="barcode">
+                            <span style="width:2px;"></span>
+                            <span style="width:4px;"></span>
+                            <span style="width:2px;"></span>
+                            <span style="width:5px;"></span>
+                            <span style="width:2px;"></span>
+                            <span style="width:4px;"></span>
+                            <span style="width:3px;"></span>
+                            <span style="width:5px;"></span>
+                            <span style="width:2px;"></span>
+                            <span style="width:4px;"></span>
+                            <span style="width:2px;"></span>
+                            <span style="width:5px;"></span>
+                        </div>
+                    </div>
+
+                    <!-- CALENDÁRIO -->
+                    <div class="calendar">
+                        <div class="calendar-header">AGOSTO</div>
+                        <div class="calendar-days">
+                            <span>12</span>
+                            <span>13</span>
+                            <span class="selected">14</span>
+                            <span>15</span>
+                            <span>16</span>
+                            <span>17</span>
+                        </div>
+                    </div>
+
+                    <!-- ESCUDO -->
+                    <div class="security">
+                        <span class="security-check">✓</span>
+                    </div>
+                </div>
+
+                <h1 class="system-title">ControleBoleto</h1>
+                <div class="title-line"></div>
+                <p class="system-description">
+                    Controle clientes, boletos e cobranças em um único sistema, garantindo mais agilidade, segurança e organização financeira.
+                </p>
+
+                <div class="features">
+                    <div class="feature">
+                        <div class="feature-icon">✓</div>
+                        <span>Segurança</span>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">$</div>
+                        <span>Controle</span>
+                    </div>
+                    <div class="feature">
+                        <div class="feature-icon">#</div>
+                        <span>Relatórios</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- PAINEL DIREITO -->
+        <section class="login-right">
+            <div class="login-box">
+                <div class="login-header">
+                    <h2>Bem-vindo de volta</h2>
+                    <p>Insira suas credenciais para gerenciar seus boletos.</p>
+                </div>
+
+                <form id="formLogin">
+                    <div class="form-group">
+                        <label for="loginUsuario">Usuário de Acesso</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">👤</span>
+                            <input type="text" id="loginUsuario" name="usuario" placeholder="Digite seu usuário" autocomplete="username" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="loginSenha">Senha</label>
+                        <div class="input-wrapper">
+                            <span class="input-icon">🔒</span>
+                            <input type="password" id="loginSenha" name="senha" placeholder="••••••••" autocomplete="current-password" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="login-button">Entrar no Sistema</button>
+                </form>
+
+                <div class="login-footer">
+                    ControleBoleto · Sistema de Gerenciamento de Boletos
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="../js/login.js"></script>
+</body>
+</html>
