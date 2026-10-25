@@ -1,10 +1,5 @@
-// =========================================================
-// BOLETOS.JS
-// PARTE 1 DE 3
-// =========================================================
 
 const API_URL = "http://localhost:3000";
-
 
 // =========================================================
 // USUÁRIO LOGADO
@@ -12,66 +7,79 @@ const API_URL = "http://localhost:3000";
 
 let usuarioLogado = {};
 
-try {
+function carregarUsuarioLocal() {
+    try {
+        const dados =
+            localStorage.getItem("usuario") ||
+            localStorage.getItem("usuarioLogado");
 
-    const usuarioSalvo =
-        localStorage.getItem("usuario") ||
-        localStorage.getItem("usuarioLogado");
+        if (!dados) {
+            usuarioLogado = {};
+            return false;
+        }
 
-    if (usuarioSalvo) {
+        usuarioLogado = JSON.parse(dados);
 
-        usuarioLogado =
-            JSON.parse(usuarioSalvo);
+        if (
+            !usuarioLogado ||
+            !usuarioLogado.id
+        ) {
+            usuarioLogado = {};
+            return false;
+        }
+
+        return true;
+
+    } catch (erro) {
+        console.error(
+            "Erro ao carregar usuário:",
+            erro
+        );
+
+        usuarioLogado = {};
+        return false;
     }
-
-} catch (erro) {
-
-    console.error(
-        "Erro ao carregar usuário logado:",
-        erro
-    );
-
-    usuarioLogado = {};
 }
 
+// Carrega o usuário ao abrir a página.
+carregarUsuarioLocal();
 
 // =========================================================
 // VERIFICAR LOGIN
 // =========================================================
 
-if (
-    !usuarioLogado ||
-    !usuarioLogado.id
-) {
+function verificarLogin() {
+    carregarUsuarioLocal();
 
-    alert(
-        "Usuário não identificado. Faça login novamente."
-    );
+    if (
+        !usuarioLogado ||
+        !usuarioLogado.id
+    ) {
+        alert(
+            "Usuário não identificado. Faça login novamente."
+        );
 
-    window.location.href =
-        "login.html";
+        window.location.href = "login.html";
+
+        return false;
+    }
+
+    return true;
 }
 
-
 // =========================================================
-// CABEÇALHO DA API
-// =========================================================
-// IMPORTANTE:
-// O server.js utiliza x-usuario-id para descobrir
-// qual usuário está fazendo a requisição.
+// CABEÇALHOS DA API
 // =========================================================
 
 function obterHeadersAPI() {
+    // Atualiza o usuário antes de cada requisição.
+    carregarUsuarioLocal();
 
     return {
-
-        "Content-Type":
-            "application/json",
-
-        "x-usuario-id":
-            String(
-                usuarioLogado.id || ""
-            )
+        "Content-Type": "application/json",
+        "x-usuario-id": String(
+            usuarioLogado.id || ""
+        )
     };
 }
 
@@ -302,10 +310,6 @@ function atualizarUsuarioNaTela() {
         "Usuário";
 
 
-    // -----------------------------------------
-    // IDs
-    // -----------------------------------------
-
     const userName =
         document.getElementById(
             "userName"
@@ -346,10 +350,6 @@ function atualizarUsuarioNaTela() {
                 .toUpperCase();
     }
 
-
-    // -----------------------------------------
-    // Compatibilidade com .user-info
-    // -----------------------------------------
 
     const nomeAlternativo =
         document.querySelector(
@@ -421,8 +421,6 @@ if (btnLogout) {
     );
 }
 
-
-// Compatibilidade caso o HTML use class="logout"
 
 document
     .querySelectorAll(".logout")
@@ -659,9 +657,6 @@ function clientePertenceAoVendedor(
     cliente
 ) {
 
-    // Administrador e Operador
-    // não possuem restrição.
-
     if (!ehVendedor()) {
 
         return true;
@@ -699,14 +694,6 @@ async function carregarClientes() {
 
     try {
 
-        /*
-         * A rota de clientes atualmente não depende
-         * necessariamente do x-usuario-id.
-         *
-         * Mesmo assim enviamos o ID do usuário para
-         * manter o padrão das requisições autenticadas.
-         */
-
         const resposta =
             await fetch(
                 `${API_URL}/api/clientes`,
@@ -740,14 +727,6 @@ async function carregarClientes() {
             await resposta.json();
 
 
-        // =================================================
-        // VENDEDOR
-        // =================================================
-        //
-        // Somente os clientes atribuídos ao vendedor.
-        //
-        // =================================================
-
         if (ehVendedor()) {
 
             listaClientesGlobal =
@@ -760,8 +739,6 @@ async function carregarClientes() {
 
         } else {
 
-            // Administrador / Operador
-
             listaClientesGlobal =
                 todosClientes;
         }
@@ -772,10 +749,6 @@ async function carregarClientes() {
             listaClientesGlobal
         );
 
-
-        // =================================================
-        // DATALIST DO CADASTRO
-        // =================================================
 
         const datalist =
             document.getElementById(
@@ -888,11 +861,6 @@ function boletoPertenceAoVendedor(
     boleto
 ) {
 
-    /*
-     * Administrador e Operador
-     * visualizam todos.
-     */
-
     if (!ehVendedor()) {
 
         return true;
@@ -909,11 +877,6 @@ function boletoPertenceAoVendedor(
         obterNomeVendedorLogado();
 
 
-    // =====================================================
-    // PRIMEIRA VERIFICAÇÃO
-    // Campo vendedor retornado no próprio boleto
-    // =====================================================
-
     const vendedorBoleto =
         normalizarTexto(
             boleto.vendedor
@@ -929,11 +892,6 @@ function boletoPertenceAoVendedor(
         return true;
     }
 
-
-    // =====================================================
-    // SEGUNDA VERIFICAÇÃO
-    // Relação através do cliente
-    // =====================================================
 
     const clienteDoBoleto =
         listaClientesGlobal.find(
@@ -1072,8 +1030,6 @@ if (campoCliente) {
         preencherDadosClienteSelecionado
     );
 }
-
-
 // =========================================================
 // MOSTRAR FORMULÁRIO
 // =========================================================
@@ -1335,7 +1291,7 @@ if (cancelarBoleto) {
 
 
 // =========================================================
-// CRIAR CAMPOS DAS PARCELAS
+// CRIAR CAMPOS DOS BOLETOS
 // =========================================================
 
 function criarCamposParcelas() {
@@ -1385,7 +1341,7 @@ function criarCamposParcelas() {
         const titulo =
             quantidade === 1
                 ? "Boleto"
-                : `Boleto / Parcela ${i + 1}`;
+                : `Boleto ${i + 1}`;
 
 
         html += `
@@ -1405,12 +1361,63 @@ function criarCamposParcelas() {
                     style="
                         display:block;
                         margin-bottom:12px;
+                        color:#334155;
                     "
                 >
                     ${titulo}
                 </strong>
 
 
+                <!-- LINHA DIGITÁVEL -->
+                <div
+                    style="
+                        margin-bottom:15px;
+                    "
+                >
+
+                    <label
+                        style="
+                            font-size:12px;
+                            color:#64748b;
+                            display:block;
+                            margin-bottom:3px;
+                        "
+                    >
+                        Linha Digitável
+                    </label>
+
+                    <input
+                        type="text"
+                        class="linhaDigitavelParcela"
+                        placeholder="Digite ou cole a linha digitável"
+                        maxlength="100"
+                        autocomplete="off"
+                        data-indice="${i}"
+                        style="
+                            padding:10px;
+                            border:1px solid #cbd5e1;
+                            border-radius:8px;
+                            width:100%;
+                        "
+                    >
+
+                    <small
+                        class="mensagemLinhaDigitavel"
+                        style="
+                            display:block;
+                            margin-top:4px;
+                            color:#64748b;
+                            font-size:11px;
+                        "
+                    >
+                        Informe a linha digitável para preencher
+                        automaticamente o valor e o vencimento.
+                    </small>
+
+                </div>
+
+
+                <!-- DADOS DO BOLETO -->
                 <div
                     style="
                         display:grid;
@@ -1420,9 +1427,17 @@ function criarCamposParcelas() {
                     "
                 >
 
+                    <!-- NÚMERO DO BOLETO -->
                     <div>
 
-                        <label>
+                        <label
+                            style="
+                                font-size:12px;
+                                color:#64748b;
+                                display:block;
+                                margin-bottom:3px;
+                            "
+                        >
                             Número do Boleto
                         </label>
 
@@ -1442,9 +1457,17 @@ function criarCamposParcelas() {
                     </div>
 
 
+                    <!-- VALOR -->
                     <div>
 
-                        <label>
+                        <label
+                            style="
+                                font-size:12px;
+                                color:#64748b;
+                                display:block;
+                                margin-bottom:3px;
+                            "
+                        >
                             Valor
                         </label>
 
@@ -1464,9 +1487,17 @@ function criarCamposParcelas() {
                     </div>
 
 
+                    <!-- VENCIMENTO -->
                     <div>
 
-                        <label>
+                        <label
+                            style="
+                                font-size:12px;
+                                color:#64748b;
+                                display:block;
+                                margin-bottom:3px;
+                            "
+                        >
                             Data de Vencimento
                         </label>
 
@@ -1497,7 +1528,7 @@ function criarCamposParcelas() {
 
 
 // =========================================================
-// ALTERAÇÃO DA QUANTIDADE DE PARCELAS
+// ALTERAÇÃO DA QUANTIDADE DE BOLETOS
 // =========================================================
 
 if (qtdParcelas) {
@@ -1508,19 +1539,951 @@ if (qtdParcelas) {
     );
 }
 
+
 // =========================================================
-// RENDERIZAR TABELA DE BOLETOS
+// LINHA DIGITÁVEL
+// =========================================================
+// O sistema trabalha com boleto bancário de 47 dígitos.
+// Pontos, espaços e outros caracteres são removidos.
 // =========================================================
 
-function renderizarTabela(boletos) {
+function somenteNumerosLinhaDigitavel(
+    valor
+) {
 
-    if (!listaBoletos) {
+    return String(
+        valor || ""
+    )
+        .replace(
+            /\D/g,
+            ""
+        );
+}
+
+
+// =========================================================
+// MÓDULO 10
+// =========================================================
+// Valida os DVs dos três primeiros campos.
+// =========================================================
+
+function calcularModulo10(numero) {
+
+    let soma = 0;
+
+    let multiplicador = 2;
+
+
+    for (
+        let i = numero.length - 1;
+        i >= 0;
+        i--
+    ) {
+
+        let resultado =
+            Number(numero[i]) *
+            multiplicador;
+
+
+        if (resultado > 9) {
+
+            resultado =
+                Math.floor(
+                    resultado / 10
+                ) +
+                (
+                    resultado % 10
+                );
+        }
+
+
+        soma +=
+            resultado;
+
+
+        multiplicador =
+            multiplicador === 2
+                ? 1
+                : 2;
+    }
+
+
+    const resto =
+        soma % 10;
+
+
+    return resto === 0
+        ? 0
+        : 10 - resto;
+}
+
+
+// =========================================================
+// MÓDULO 11
+// =========================================================
+// Utilizado para validar o DV geral do boleto.
+// =========================================================
+
+function calcularModulo11Boleto(
+    codigoSemDV
+) {
+
+    let soma = 0;
+
+    let peso = 2;
+
+
+    /*
+     * Percorre da direita para a esquerda.
+     *
+     * Pesos:
+     * 2, 3, 4, 5, 6, 7, 8 e 9.
+     */
+
+    for (
+        let i = codigoSemDV.length - 1;
+        i >= 0;
+        i--
+    ) {
+
+        soma +=
+            Number(
+                codigoSemDV[i]
+            ) *
+            peso;
+
+
+        peso++;
+
+
+        if (peso > 9) {
+
+            peso = 2;
+        }
+    }
+
+
+    const resto =
+        soma % 11;
+
+
+    const resultado =
+        11 - resto;
+
+
+    /*
+     * Para resultado 0, 10 ou 11,
+     * o DV utilizado é 1.
+     */
+
+    if (
+        resultado === 0 ||
+        resultado === 10 ||
+        resultado === 11
+    ) {
+
+        return 1;
+    }
+
+
+    return resultado;
+}
+
+
+// =========================================================
+// CONVERTER LINHA DIGITÁVEL PARA CÓDIGO DE BARRAS
+// =========================================================
+
+function converterLinhaParaCodigoBarras(
+    linha
+) {
+
+    const numeros =
+        somenteNumerosLinhaDigitavel(
+            linha
+        );
+
+
+    if (
+        numeros.length !== 47
+    ) {
+
+        return "";
+    }
+
+
+    const bancoMoeda =
+        numeros.substring(
+            0,
+            4
+        );
+
+
+    const dvGeral =
+        numeros.substring(
+            32,
+            33
+        );
+
+
+    const fatorValor =
+        numeros.substring(
+            33,
+            47
+        );
+
+
+    const campoLivre1 =
+        numeros.substring(
+            4,
+            9
+        );
+
+
+    const campoLivre2 =
+        numeros.substring(
+            10,
+            20
+        );
+
+
+    const campoLivre3 =
+        numeros.substring(
+            21,
+            31
+        );
+
+
+    /*
+     * Código de barras:
+     *
+     * banco/moeda
+     * + DV geral
+     * + fator/valor
+     * + campo livre
+     */
+
+    return (
+        bancoMoeda +
+        dvGeral +
+        fatorValor +
+        campoLivre1 +
+        campoLivre2 +
+        campoLivre3
+    );
+}
+
+
+// =========================================================
+// VALIDAR LINHA DIGITÁVEL DE 47 DÍGITOS
+// =========================================================
+
+function validarLinhaDigitavel47(
+    linha
+) {
+
+    const numeros =
+        somenteNumerosLinhaDigitavel(
+            linha
+        );
+
+
+    if (
+        numeros.length !== 47
+    ) {
+
+        return false;
+    }
+
+
+    // =====================================================
+    // DV DO CAMPO 1
+    // =====================================================
+
+    const campo1 =
+        numeros.substring(
+            0,
+            9
+        );
+
+
+    const dv1 =
+        Number(
+            numeros.substring(
+                9,
+                10
+            )
+        );
+
+
+    if (
+        calcularModulo10(
+            campo1
+        ) !== dv1
+    ) {
+
+        return false;
+    }
+
+
+    // =====================================================
+    // DV DO CAMPO 2
+    // =====================================================
+
+    const campo2 =
+        numeros.substring(
+            10,
+            20
+        );
+
+
+    const dv2 =
+        Number(
+            numeros.substring(
+                20,
+                21
+            )
+        );
+
+
+    if (
+        calcularModulo10(
+            campo2
+        ) !== dv2
+    ) {
+
+        return false;
+    }
+
+
+    // =====================================================
+    // DV DO CAMPO 3
+    // =====================================================
+
+    const campo3 =
+        numeros.substring(
+            21,
+            31
+        );
+
+
+    const dv3 =
+        Number(
+            numeros.substring(
+                31,
+                32
+            )
+        );
+
+
+    if (
+        calcularModulo10(
+            campo3
+        ) !== dv3
+    ) {
+
+        return false;
+    }
+
+
+    // =====================================================
+    // DV GERAL
+    // =====================================================
+
+    const codigoBarras =
+        converterLinhaParaCodigoBarras(
+            numeros
+        );
+
+
+    if (
+        codigoBarras.length !== 44
+    ) {
+
+        return false;
+    }
+
+
+    /*
+     * No código de barras o DV geral
+     * ocupa a quinta posição.
+     *
+     * Como o JavaScript começa em zero,
+     * corresponde ao índice 4.
+     */
+
+    const dvGeralInformado =
+        Number(
+            codigoBarras.substring(
+                4,
+                5
+            )
+        );
+
+
+    /*
+     * Retira o DV geral antes de
+     * realizar o cálculo do Módulo 11.
+     */
+
+    const codigoSemDV =
+        codigoBarras.substring(
+            0,
+            4
+        ) +
+        codigoBarras.substring(
+            5
+        );
+
+
+    const dvGeralCalculado =
+        calcularModulo11Boleto(
+            codigoSemDV
+        );
+
+
+    if (
+        dvGeralCalculado !==
+        dvGeralInformado
+    ) {
+
+        return false;
+    }
+
+
+    return true;
+}
+
+
+// =========================================================
+// CALCULAR DATA PELO FATOR DE VENCIMENTO
+// =========================================================
+
+function calcularDataFatorVencimento(
+    fator
+) {
+
+    const numeroFator =
+        Number(fator);
+
+
+    if (
+        !numeroFator ||
+        numeroFator < 1000
+    ) {
+
+        return "";
+    }
+
+
+    /*
+     * Novo ciclo do fator de vencimento.
+     *
+     * Fator 1000 corresponde a 22/02/2025.
+     */
+
+    const dataBase =
+        new Date(
+            2025,
+            1,
+            22
+        );
+
+
+    dataBase.setDate(
+        dataBase.getDate() +
+        (
+            numeroFator -
+            1000
+        )
+    );
+
+
+    const ano =
+        dataBase.getFullYear();
+
+
+    const mes =
+        String(
+            dataBase.getMonth() + 1
+        )
+            .padStart(
+                2,
+                "0"
+            );
+
+
+    const dia =
+        String(
+            dataBase.getDate()
+        )
+            .padStart(
+                2,
+                "0"
+            );
+
+
+    return (
+        `${ano}-${mes}-${dia}`
+    );
+}
+
+
+// =========================================================
+// EXTRAIR DADOS DA LINHA DIGITÁVEL
+// =========================================================
+
+function extrairDadosLinhaDigitavel(
+    linha
+) {
+
+    const numeros =
+        somenteNumerosLinhaDigitavel(
+            linha
+        );
+
+
+    if (
+        numeros.length !== 47
+    ) {
+
+        return {
+
+            valida: false,
+
+            mensagem:
+                "A linha digitável deve possuir 47 números."
+        };
+    }
+
+
+    // -----------------------------------------------------
+    // VALIDAR OS DVs
+    // -----------------------------------------------------
+
+    if (
+        !validarLinhaDigitavel47(
+            numeros
+        )
+    ) {
+
+        return {
+
+            valida: false,
+
+            mensagem:
+                "A linha digitável informada é inválida. Verifique os dígitos verificadores (DVs)."
+        };
+    }
+
+
+    /*
+     * Campo 5:
+     *
+     * posições 34 a 37 = fator
+     * posições 38 a 47 = valor
+     */
+
+    const fator =
+        numeros.substring(
+            33,
+            37
+        );
+
+
+    const valorTexto =
+        numeros.substring(
+            37,
+            47
+        );
+
+
+    const valor =
+        Number(
+            valorTexto
+        ) / 100;
+
+
+    const vencimento =
+        calcularDataFatorVencimento(
+            fator
+        );
+
+
+    return {
+
+        valida: true,
+
+        linha:
+            numeros,
+
+        fator:
+            fator,
+
+        valor:
+            valor,
+
+        vencimento:
+            vencimento
+    };
+}
+
+
+// =========================================================
+// MOSTRAR MENSAGEM DA LINHA DIGITÁVEL
+// =========================================================
+
+function mostrarMensagemLinhaDigitavel(
+    campoLinha,
+    mensagem,
+    cor
+) {
+
+    const parcela =
+        campoLinha.closest(
+            ".parcela-item"
+        );
+
+
+    if (!parcela) {
+
         return;
     }
 
 
+    const campoMensagem =
+        parcela.querySelector(
+            ".mensagemLinhaDigitavel"
+        );
+
+
+    if (!campoMensagem) {
+
+        return;
+    }
+
+
+    campoMensagem.textContent =
+        mensagem;
+
+
+    campoMensagem.style.color =
+        cor || "#64748b";
+}
+
+
+// =========================================================
+// PREENCHER VALOR E VENCIMENTO
+// =========================================================
+
+function preencherPelaLinhaDigitavel(
+    campoLinha
+) {
+
+    if (!campoLinha) {
+
+        return;
+    }
+
+
+    const linha =
+        somenteNumerosLinhaDigitavel(
+            campoLinha.value
+        );
+
+
+    // -----------------------------------------------------
+    // CAMPO VAZIO
+    // -----------------------------------------------------
+
+    if (!linha) {
+
+        mostrarMensagemLinhaDigitavel(
+            campoLinha,
+            "Informe a linha digitável para preencher automaticamente o valor e o vencimento.",
+            "#64748b"
+        );
+
+        return;
+    }
+
+
+    // -----------------------------------------------------
+    // AINDA ESTÁ DIGITANDO
+    // -----------------------------------------------------
+
     if (
-        !Array.isArray(boletos) ||
+        linha.length < 47
+    ) {
+
+        mostrarMensagemLinhaDigitavel(
+            campoLinha,
+            `Linha digitável: ${linha.length}/47 números.`,
+            "#64748b"
+        );
+
+        return;
+    }
+
+
+    // -----------------------------------------------------
+    // MAIS DE 47 DÍGITOS
+    // -----------------------------------------------------
+
+    if (
+        linha.length > 47
+    ) {
+
+        mostrarMensagemLinhaDigitavel(
+            campoLinha,
+            "A linha digitável deve possuir 47 números.",
+            "#dc2626"
+        );
+
+        return;
+    }
+
+
+    // -----------------------------------------------------
+    // EXTRAIR E VALIDAR
+    // -----------------------------------------------------
+
+    const resultado =
+        extrairDadosLinhaDigitavel(
+            linha
+        );
+
+
+    if (!resultado.valida) {
+
+        mostrarMensagemLinhaDigitavel(
+            campoLinha,
+            resultado.mensagem,
+            "#dc2626"
+        );
+
+        return;
+    }
+
+
+    campoLinha.value =
+        resultado.linha;
+
+
+    const parcela =
+        campoLinha.closest(
+            ".parcela-item"
+        );
+
+
+    if (!parcela) {
+
+        return;
+    }
+
+
+    const campoValor =
+        parcela.querySelector(
+            ".valorBoletoParcela"
+        );
+
+
+    const campoVencimento =
+        parcela.querySelector(
+            ".dataParcelaCustomizada"
+        );
+
+
+    // -----------------------------------------------------
+    // VALOR
+    // -----------------------------------------------------
+
+    if (
+        campoValor &&
+        resultado.valor > 0
+    ) {
+
+        campoValor.value =
+            resultado.valor
+                .toFixed(2)
+                .replace(
+                    ".",
+                    ","
+                );
+    }
+
+
+    // -----------------------------------------------------
+    // VENCIMENTO
+    // -----------------------------------------------------
+
+    if (
+        campoVencimento &&
+        resultado.vencimento
+    ) {
+
+        campoVencimento.value =
+            resultado.vencimento;
+    }
+
+
+    // -----------------------------------------------------
+    // MENSAGEM
+    // -----------------------------------------------------
+
+    if (
+        resultado.valor > 0 &&
+        resultado.vencimento
+    ) {
+
+        mostrarMensagemLinhaDigitavel(
+            campoLinha,
+            "Linha digitável válida. DVs conferidos. Valor e vencimento preenchidos automaticamente.",
+            "#16a34a"
+        );
+
+    } else if (
+        resultado.vencimento
+    ) {
+
+        mostrarMensagemLinhaDigitavel(
+            campoLinha,
+            "Linha digitável válida. DVs conferidos. Vencimento preenchido automaticamente.",
+            "#16a34a"
+        );
+
+    } else {
+
+        mostrarMensagemLinhaDigitavel(
+            campoLinha,
+            "Linha digitável válida. DVs conferidos.",
+            "#16a34a"
+        );
+    }
+}
+
+
+// =========================================================
+// EVENTO DA LINHA DIGITÁVEL
+// =========================================================
+
+document.addEventListener(
+    "input",
+    evento => {
+
+        if (
+            evento.target &&
+            evento.target.classList.contains(
+                "linhaDigitavelParcela"
+            )
+        ) {
+
+            preencherPelaLinhaDigitavel(
+                evento.target
+            );
+        }
+    }
+);
+
+
+// =========================================================
+// VALIDAR LINHA AO SAIR DO CAMPO
+// =========================================================
+
+document.addEventListener(
+    "focusout",
+    evento => {
+
+        if (
+            !evento.target ||
+            !evento.target.classList.contains(
+                "linhaDigitavelParcela"
+            )
+        ) {
+
+            return;
+        }
+
+
+        const linha =
+            somenteNumerosLinhaDigitavel(
+                evento.target.value
+            );
+
+
+        /*
+         * A linha digitável continua opcional.
+         */
+
+        if (!linha) {
+
+            return;
+        }
+
+
+        if (
+            linha.length !== 47
+        ) {
+
+            mostrarMensagemLinhaDigitavel(
+                evento.target,
+                "A linha digitável deve possuir 47 números.",
+                "#dc2626"
+            );
+
+            return;
+        }
+
+
+        preencherPelaLinhaDigitavel(
+            evento.target
+        );
+    }
+);
+
+
+// =========================================================
+// FORMATAR STATUS
+// =========================================================
+
+
+function obterClasseStatus(status) {
+    const statusNormalizado = normalizarTexto(status);
+
+    if (statusNormalizado === "pago") {
+        return "paid";
+    }
+
+    if (statusNormalizado === "vencido") {
+        return "overdue";
+    }
+
+    if (statusNormalizado === "baixa") {
+        return "collection-status";
+    }
+
+    return "pending";
+}
+
+// =========================================================
+// RENDERIZAR TABELA DE BOLETOS
+// =========================================================
+
+function renderizarTabelaBoletos(
+    boletos = listaBoletosGlobal
+) {
+
+    if (!listaBoletos) {
+
+        return;
+    }
+
+
+    listaBoletos.innerHTML = "";
+
+
+    if (
+        !boletos ||
         boletos.length === 0
     ) {
 
@@ -1530,8 +2493,8 @@ function renderizarTabela(boletos) {
                     colspan="9"
                     style="
                         text-align:center;
+                        padding:20px;
                         color:#64748b;
-                        padding:25px;
                     "
                 >
                     Nenhum boleto encontrado.
@@ -1543,176 +2506,133 @@ function renderizarTabela(boletos) {
     }
 
 
-    listaBoletos.innerHTML =
-        boletos
-            .map(boleto => {
+    boletos.forEach(
+        boleto => {
 
-                const status =
-                    calcularStatusAutomatico(
-                        boleto.vencimento,
-                        boleto.status
-                    );
+            const tr =
+                document.createElement(
+                    "tr"
+                );
 
 
-                let classeStatus =
-                    "pending";
+            const status =
+                calcularStatusAutomatico(
+                    boleto.vencimento,
+                    boleto.status
+                );
 
 
-                if (status === "Pago") {
-
-                    classeStatus =
-                        "paid";
-
-                } else if (
-                    status === "Vencido"
-                ) {
-
-                    classeStatus =
-                        "overdue";
-
-                } else if (
-                    status === "Baixa"
-                ) {
-
-                    classeStatus =
-                        "baixa";
-                }
+            const classeStatus =
+                obterClasseStatus(
+                    status
+                );
 
 
-                // =========================================
-                // COLUNA DE SELEÇÃO
-                // =========================================
-                // Vendedor não pode selecionar boletos
-                // para Pago ou Baixa.
-                // =========================================
+            // =================================================
+            // BOTÕES
+            // =================================================
 
-                const colunaSelecao =
-                    ehVendedor()
-
-                        ? `
-                            <td
-                                style="
-                                    text-align:center;
-                                    color:#94a3b8;
-                                "
-                            >
-                                -
-                            </td>
-                        `
-
-                        : `
-                            <td
-                                style="
-                                    text-align:center;
-                                "
-                            >
-                                <input
-                                    type="checkbox"
-                                    class="checkBoleto"
-                                    value="${boleto.id}"
-                                >
-                            </td>
-                        `;
+            let botoes = "";
 
 
-                // =========================================
-                // COLUNA DE AÇÕES
-                // =========================================
-                // Vendedor somente consulta.
-                // =========================================
+            /*
+             * VENDEDOR:
+             * somente consulta.
+             */
 
-                const colunaAcao =
-                    ehVendedor()
+            if (!ehVendedor()) {
 
-                        ? `
-                            <td
-                                style="
-                                    text-align:center;
-                                    color:#64748b;
-                                    font-size:12px;
-                                "
-                            >
-                                Consulta
-                            </td>
-                        `
-
-                        : `
-                            <td
-                                style="
-                                    text-align:center;
-                                "
-                            >
-                                <button
-                                    type="button"
-                                    onclick="prepararEdicaoBoleto(${boleto.id})"
-                                    title="Editar boleto"
-                                    style="
-                                        background:#f59e0b;
-                                        color:#ffffff;
-                                        border:none;
-                                        width:34px;
-                                        height:34px;
-                                        border-radius:6px;
-                                        cursor:pointer;
-                                    "
-                                >
-                                    ✏️
-                                </button>
-                            </td>
-                        `;
-
-
-                return `
-                    <tr>
-
-                        ${colunaSelecao}
-
-                        <td>
-                            <strong>
-                                ${boleto.id}
-                            </strong>
-                        </td>
-
-                        <td>
-                            ${boleto.razao_social || "-"}
-                        </td>
-
-                        <td>
-                            ${boleto.num_boleto || "-"}
-                        </td>
-
-                        <td>
-                            ${formatarMoeda(
-                                boleto.valor
-                            )}
-                        </td>
-
-                        <td>
-                            ${formatarData(
-                                boleto.data_emissao
-                            )}
-                        </td>
-
-                        <td>
-                            ${formatarData(
-                                boleto.vencimento
-                            )}
-                        </td>
-
-                        <td>
-                            <span
-                                class="status ${classeStatus}"
-                            >
-                                ${status}
-                            </span>
-                        </td>
-
-                        ${colunaAcao}
-
-                    </tr>
+                botoes += `
+                    <button
+                        type="button"
+                        class="btn-editar-boleto"
+                        onclick="prepararEdicaoBoleto(${boleto.id})"
+                        title="Editar boleto"
+                    >
+                        ✏️
+                    </button>
                 `;
-            })
-            .join("");
+            }
+
+
+            // =================================================
+            // CHECKBOX
+            // =================================================
+
+            let checkbox = "";
+
+
+            if (!ehVendedor()) {
+
+                checkbox = `
+                    <input
+                        type="checkbox"
+                        class="checkbox-boleto"
+                        value="${boleto.id}"
+                    >
+                `;
+
+            } else {
+
+                checkbox = "";
+            }
+
+
+            tr.innerHTML = `
+
+                <td>
+                    ${checkbox}
+                </td>
+
+                <td>
+                    ${boleto.id || ""}
+                </td>
+
+                <td>
+                    ${boleto.razao_social || ""}
+                </td>
+
+                <td>
+                    ${boleto.num_boleto || ""}
+                </td>
+
+                <td>
+                    ${formatarMoeda(
+                        boleto.valor
+                    )}
+                </td>
+
+                <td>
+                    ${formatarData(
+                        boleto.data_emissao
+                    )}
+                </td>
+
+                <td>
+                    ${formatarData(
+                        boleto.vencimento
+                    )}
+                </td>
+
+                <td>
+                    <span
+                        class="${classeStatus}"
+                    >
+                        ${status}
+                    </span>
+                </td>
+
+                <td>
+                    ${botoes}
+                </td>
+            `;
+
+
+            listaBoletos.appendChild(
+                tr
+            );
+        }
+    );
 }
 
 
@@ -1723,40 +2643,6 @@ function renderizarTabela(boletos) {
 async function carregarBoletos() {
 
     try {
-
-        // =============================================
-        // VERIFICAR USUÁRIO
-        // =============================================
-
-        if (
-            !usuarioLogado ||
-            !usuarioLogado.id
-        ) {
-
-            throw new Error(
-                "Usuário não identificado. Faça login novamente."
-            );
-        }
-
-
-        console.log(
-            "Buscando boletos com usuário ID:",
-            usuarioLogado.id
-        );
-
-
-        // =============================================
-        // REQUISIÇÃO CORRIGIDA
-        // =============================================
-        //
-        // ESSA É A CORREÇÃO DO ERRO 401.
-        //
-        // O server.js precisa receber:
-        //
-        // x-usuario-id
-        //
-        // para descobrir quem está logado.
-        // =============================================
 
         const resposta =
             await fetch(
@@ -1770,39 +2656,6 @@ async function carregarBoletos() {
             );
 
 
-        // =============================================
-        // ERRO 401
-        // =============================================
-
-        if (
-            resposta.status === 401
-        ) {
-
-            const retorno =
-                await resposta
-                    .json()
-                    .catch(
-                        () => ({})
-                    );
-
-
-            console.error(
-                "API recusou o usuário:",
-                retorno
-            );
-
-
-            throw new Error(
-                retorno.erro ||
-                "Usuário não autorizado."
-            );
-        }
-
-
-        // =============================================
-        // OUTROS ERROS
-        // =============================================
-
         if (!resposta.ok) {
 
             const retorno =
@@ -1815,108 +2668,71 @@ async function carregarBoletos() {
 
             throw new Error(
                 retorno.erro ||
-                `Erro ao carregar boletos. Código ${resposta.status}.`
+                "Erro ao carregar boletos."
             );
         }
 
 
-        // =============================================
-        // BOLETOS RECEBIDOS
-        // =============================================
-
-        const todosBoletos =
+        let boletos =
             await resposta.json();
 
 
         if (
             !Array.isArray(
-                todosBoletos
+                boletos
             )
         ) {
 
-            throw new Error(
-                "A API retornou uma resposta inválida."
-            );
+            boletos = [];
         }
 
 
-        // =============================================
-        // CONTROLE DO VENDEDOR
-        // =============================================
-        //
-        // O server.js já deve retornar somente
-        // os boletos permitidos.
-        //
-        // Mesmo assim fazemos uma segunda
-        // verificação no frontend.
-        // =============================================
+        /*
+         * O backend já faz o filtro do vendedor.
+         *
+         * Esta segunda verificação mantém
+         * a proteção também no front-end.
+         */
 
         if (ehVendedor()) {
 
-            listaBoletosGlobal =
-                todosBoletos.filter(
+            boletos =
+                boletos.filter(
                     boleto =>
                         boletoPertenceAoVendedor(
                             boleto
                         )
                 );
-
-        } else {
-
-            // Administrador e Operador
-
-            listaBoletosGlobal =
-                todosBoletos;
         }
 
 
-        // =============================================
-        // LOGS PARA TESTE
-        // =============================================
+        /*
+         * Atualizar status visual.
+         *
+         * Pago e Baixa são preservados.
+         */
 
-        console.log(
-            "=============================="
-        );
+        listaBoletosGlobal =
+            boletos.map(
+                boleto => {
 
-        console.log(
-            "CARREGAMENTO DE BOLETOS"
-        );
+                    return {
 
-        console.log(
-            "Usuário:",
-            usuarioLogado.nome
-        );
+                        ...boleto,
 
-        console.log(
-            "ID enviado:",
-            usuarioLogado.id
-        );
+                        status:
+                            calcularStatusAutomatico(
+                                boleto.vencimento,
+                                boleto.status
+                            )
+                    };
+                }
+            );
 
-        console.log(
-            "Perfil:",
-            usuarioLogado.permissao
-        );
 
-        console.log(
-            "Boletos recebidos da API:",
-            todosBoletos
-        );
-
-        console.log(
-            "Boletos permitidos:",
+        renderizarTabelaBoletos(
             listaBoletosGlobal
         );
-
-        console.log(
-            "=============================="
-        );
-
-
-        // =============================================
-        // APLICAR FILTROS
-        // =============================================
-
-        aplicarFiltros();
 
 
     } catch (erro) {
@@ -1927,9 +2743,6 @@ async function carregarBoletos() {
         );
 
 
-        listaBoletosGlobal = [];
-
-
         if (listaBoletos) {
 
             listaBoletos.innerHTML = `
@@ -1938,16 +2751,73 @@ async function carregarBoletos() {
                         colspan="9"
                         style="
                             text-align:center;
+                            padding:20px;
                             color:#dc2626;
-                            padding:25px;
                         "
                     >
-                        ${erro.message}
+                        Não foi possível carregar os boletos.
                     </td>
                 </tr>
             `;
         }
     }
+}
+
+
+// =========================================================
+// VALIDAR CLIENTE DO BOLETO
+// =========================================================
+
+function validarClienteBoleto() {
+
+    const nomeCliente =
+        obterValor(
+            "razaoSocialBoleto"
+        );
+
+
+    if (!nomeCliente) {
+
+        alert(
+            "Selecione um cliente."
+        );
+
+        return null;
+    }
+
+
+    const cliente =
+        encontrarCliente(
+            nomeCliente
+        );
+
+
+    if (!cliente) {
+
+        alert(
+            "Selecione um cliente válido da lista."
+        );
+
+        return null;
+    }
+
+
+    if (
+        ehVendedor() &&
+        !clientePertenceAoVendedor(
+            cliente
+        )
+    ) {
+
+        alert(
+            "Você não possui acesso a este cliente."
+        );
+
+        return null;
+    }
+
+
+    return cliente;
 }
 
 
@@ -1964,63 +2834,44 @@ if (formBoleto) {
             evento.preventDefault();
 
 
-            // =============================================
-            // VENDEDOR NÃO PODE SALVAR
-            // =============================================
+            // =================================================
+            // BLOQUEIO DO VENDEDOR
+            // =================================================
 
             if (ehVendedor()) {
 
                 alert(
-                    "O vendedor possui acesso somente à consulta e ao relatório dos boletos de seus clientes."
+                    "O vendedor não possui permissão para cadastrar ou editar boletos."
                 );
 
                 return;
             }
 
 
-            // =============================================
+            // =================================================
             // CLIENTE
-            // =============================================
-
-            const razaoSocial =
-                obterValor(
-                    "razaoSocialBoleto"
-                );
-
-
-            if (!razaoSocial) {
-
-                alert(
-                    "Selecione o cliente."
-                );
-
-                return;
-            }
-
+            // =================================================
 
             const cliente =
-                encontrarCliente(
-                    razaoSocial
-                );
+                validarClienteBoleto();
 
 
             if (!cliente) {
 
-                alert(
-                    "Selecione um cliente cadastrado."
-                );
-
                 return;
             }
 
 
-            // =============================================
+            // =================================================
             // DATA DE EMISSÃO
-            // =============================================
+            // =================================================
 
             const dataEmissao =
                 obterValor(
                     "dataEmissao"
+                ) ||
+                obterValor(
+                    "dataEmissaoBoleto"
                 );
 
 
@@ -2034,19 +2885,31 @@ if (formBoleto) {
             }
 
 
-            // =============================================
-            // OBSERVAÇÃO / INSTRUÇÕES
-            // =============================================
+            // =================================================
+            // INSTRUÇÕES / OBSERVAÇÕES
+            // =================================================
 
             const instrucoes =
                 obterValor(
-                    "instrucoesBoleto"
+                    "instrucoes"
+                ) ||
+                obterValor(
+                    "observacoesBoleto"
+                ) ||
+                obterValor(
+                    "observacaoBoleto"
                 );
 
 
-            // =============================================
-            // PARCELAS
-            // =============================================
+            // =================================================
+            // CAMPOS DOS BOLETOS
+            // =================================================
+
+            const linhasDigitaveis =
+                document.querySelectorAll(
+                    ".linhaDigitavelParcela"
+                );
+
 
             const numeros =
                 document.querySelectorAll(
@@ -2067,11 +2930,13 @@ if (formBoleto) {
 
 
             if (
-                numeros.length === 0
+                numeros.length === 0 ||
+                valores.length === 0 ||
+                vencimentos.length === 0
             ) {
 
                 alert(
-                    "Nenhum boleto informado."
+                    "Nenhum boleto foi informado."
                 );
 
                 return;
@@ -2081,6 +2946,10 @@ if (formBoleto) {
             const boletos = [];
 
 
+            // =================================================
+            // MONTAR CADA BOLETO
+            // =================================================
+
             for (
                 let i = 0;
                 i < numeros.length;
@@ -2088,20 +2957,44 @@ if (formBoleto) {
             ) {
 
                 const numero =
-                    numeros[i]
-                        .value
-                        .trim();
+                    String(
+                        numeros[i]
+                            ? numeros[i].value
+                            : ""
+                    ).trim();
+
+
+                const valorTexto =
+                    String(
+                        valores[i]
+                            ? valores[i].value
+                            : ""
+                    ).trim();
 
 
                 const valor =
                     converterMoedaParaNumero(
-                        valores[i].value
+                        valorTexto
                     );
 
 
                 const vencimento =
-                    vencimentos[i].value;
+                    vencimentos[i]
+                        ? vencimentos[i].value
+                        : "";
 
+
+                const linhaDigitavel =
+                    linhasDigitaveis[i]
+                        ? somenteNumerosLinhaDigitavel(
+                            linhasDigitaveis[i].value
+                        )
+                        : "";
+
+
+                // ---------------------------------------------
+                // NÚMERO
+                // ---------------------------------------------
 
                 if (!numero) {
 
@@ -2112,6 +3005,10 @@ if (formBoleto) {
                     return;
                 }
 
+
+                // ---------------------------------------------
+                // VALOR
+                // ---------------------------------------------
 
                 if (
                     !valor ||
@@ -2126,6 +3023,10 @@ if (formBoleto) {
                 }
 
 
+                // ---------------------------------------------
+                // VENCIMENTO
+                // ---------------------------------------------
+
                 if (!vencimento) {
 
                     alert(
@@ -2136,13 +3037,81 @@ if (formBoleto) {
                 }
 
 
+                // ---------------------------------------------
+                // LINHA DIGITÁVEL
+                // ---------------------------------------------
+                // Não é obrigatória.
+                //
+                // Se for informada:
+                // - deve possuir 47 números;
+                // - DV do campo 1 deve ser válido;
+                // - DV do campo 2 deve ser válido;
+                // - DV do campo 3 deve ser válido;
+                // - DV geral também deve ser válido.
+                // ---------------------------------------------
+
+                if (linhaDigitavel) {
+
+                    if (
+                        linhaDigitavel.length !== 47
+                    ) {
+
+                        alert(
+                            `A linha digitável do boleto ${i + 1} deve possuir 47 números.`
+                        );
+
+                        return;
+                    }
+
+
+                    if (
+                        !validarLinhaDigitavel47(
+                            linhaDigitavel
+                        )
+                    ) {
+
+                        alert(
+                            `A linha digitável do boleto ${i + 1} é inválida. Verifique os dígitos verificadores (DVs).`
+                        );
+
+                        return;
+                    }
+                }
+
+
+                // ---------------------------------------------
+                // STATUS
+                // ---------------------------------------------
+
+                let status =
+                    boletoEmEdicao
+                        ? boletoEmEdicao.status
+                        : "Pendente";
+
+
+                status =
+                    calcularStatusAutomatico(
+                        vencimento,
+                        status
+                    );
+
+
+                // ---------------------------------------------
+                // OBJETO DO BOLETO
+                // ---------------------------------------------
+
                 boletos.push({
 
                     razao_social:
-                        cliente.razao_social,
+                        cliente.razao_social ||
+                        cliente.nome_fantasia ||
+                        "",
 
                     num_boleto:
                         numero,
+
+                    linha_digitavel:
+                        linhaDigitavel || null,
 
                     valor:
                         valor,
@@ -2157,9 +3126,7 @@ if (formBoleto) {
                         cliente.vendedor || "",
 
                     status:
-                        boletoEmEdicao
-                            ? boletoEmEdicao.status
-                            : "Pendente",
+                        status,
 
                     motivo_baixa:
                         boletoEmEdicao
@@ -2189,26 +3156,53 @@ if (formBoleto) {
             }
 
 
+            // =================================================
+            // DESABILITAR BOTÃO DURANTE SALVAMENTO
+            // =================================================
+
+            if (btnSalvarBoleto) {
+
+                btnSalvarBoleto.disabled =
+                    true;
+
+
+                btnSalvarBoleto.textContent =
+                    boletoEmEdicaoId
+                        ? "Salvando..."
+                        : "Cadastrando...";
+            }
+
+
             try {
 
-                // =========================================
-                // EDITAR BOLETO
-                // =========================================
+                // =================================================
+                // EDIÇÃO
+                // =================================================
 
                 if (boletoEmEdicaoId) {
+
+                    /*
+                     * Durante a edição existe apenas
+                     * um boleto no formulário.
+                     */
+
+                    const dados =
+                        boletos[0];
+
 
                     const resposta =
                         await fetch(
                             `${API_URL}/api/boletos/${boletoEmEdicaoId}`,
                             {
-                                method: "PUT",
+                                method:
+                                    "PUT",
 
                                 headers:
                                     obterHeadersAPI(),
 
                                 body:
                                     JSON.stringify(
-                                        boletos[0]
+                                        dados
                                     )
                             }
                         );
@@ -2232,16 +3226,16 @@ if (formBoleto) {
 
 
                     alert(
-                        "Boleto atualizado com sucesso!"
+                        retorno.mensagem ||
+                        "Boleto atualizado com sucesso."
                     );
-                }
 
 
-                // =========================================
-                // CADASTRAR UM BOLETO
-                // =========================================
+                // =================================================
+                // CADASTRO DE UM BOLETO
+                // =================================================
 
-                else if (
+                } else if (
                     boletos.length === 1
                 ) {
 
@@ -2249,7 +3243,8 @@ if (formBoleto) {
                         await fetch(
                             `${API_URL}/api/boletos`,
                             {
-                                method: "POST",
+                                method:
+                                    "POST",
 
                                 headers:
                                     obterHeadersAPI(),
@@ -2280,36 +3275,31 @@ if (formBoleto) {
 
 
                     alert(
-                        "Boleto cadastrado com sucesso!"
+                        retorno.mensagem ||
+                        "Boleto cadastrado com sucesso."
                     );
-                }
 
 
-                // =========================================
-                // CADASTRAR VÁRIOS BOLETOS
-                // =========================================
+                // =================================================
+                // CADASTRO DE VÁRIOS BOLETOS
+                // =================================================
 
-                else {
+                } else {
 
                     const resposta =
                         await fetch(
                             `${API_URL}/api/boletos/lote`,
                             {
-                                method: "POST",
+                                method:
+                                    "POST",
 
                                 headers:
                                     obterHeadersAPI(),
 
                                 body:
                                     JSON.stringify({
-
                                         boletos:
-                                            boletos,
-
-                                        usuario_logado:
-                                            usuarioLogado.nome ||
-                                            usuarioLogado.usuario ||
-                                            "Sistema"
+                                            boletos
                                     })
                             }
                         );
@@ -2327,16 +3317,21 @@ if (formBoleto) {
 
                         throw new Error(
                             retorno.erro ||
-                            "Erro ao cadastrar boletos."
+                            "Erro ao cadastrar os boletos."
                         );
                     }
 
 
                     alert(
-                        `${boletos.length} boletos cadastrados com sucesso!`
+                        retorno.mensagem ||
+                        `${boletos.length} boletos cadastrados com sucesso.`
                     );
                 }
 
+
+                // =================================================
+                // FINALIZAR
+                // =================================================
 
                 fecharFormulario();
 
@@ -2354,8 +3349,23 @@ if (formBoleto) {
 
                 alert(
                     erro.message ||
-                    "Erro ao salvar boleto."
+                    "Não foi possível salvar o boleto."
                 );
+
+
+            } finally {
+
+                if (btnSalvarBoleto) {
+
+                    btnSalvarBoleto.disabled =
+                        false;
+
+
+                    btnSalvarBoleto.textContent =
+                        boletoEmEdicaoId
+                            ? "Salvar Alterações"
+                            : "Salvar Boleto";
+                }
             }
         }
     );
@@ -2363,15 +3373,15 @@ if (formBoleto) {
 
 
 // =========================================================
-// PREPARAR EDIÇÃO
+// PREPARAR EDIÇÃO DO BOLETO
 // =========================================================
 
 window.prepararEdicaoBoleto =
-    function(id) {
+    function (id) {
 
-        // =============================================
-        // VENDEDOR NÃO EDITA
-        // =============================================
+        // =================================================
+        // VENDEDOR NÃO PODE EDITAR
+        // =================================================
 
         if (ehVendedor()) {
 
@@ -2409,9 +3419,212 @@ window.prepararEdicaoBoleto =
             boleto;
 
 
-        // =============================================
+        // =================================================
+        // CLIENTE
+        // =================================================
+
+        preencherCampo(
+            "razaoSocialBoleto",
+            boleto.razao_social || ""
+        );
+
+
+        // =================================================
+        // DADOS DO PAGADOR
+        // =================================================
+
+        preencherCampo(
+            "cpfCnpjPagador",
+            boleto.pagador_cpf_cnpj || ""
+        );
+
+
+        preencherCampo(
+            "enderecoPagador",
+            boleto.pagador_endereco || ""
+        );
+
+
+        preencherCampo(
+            "numeroPagador",
+            boleto.pagador_numero || ""
+        );
+
+
+        preencherCampo(
+            "cepPagador",
+            boleto.pagador_cep || ""
+        );
+
+
+        // =================================================
+        // DATA DE EMISSÃO
+        // =================================================
+
+        preencherCampo(
+            "dataEmissao",
+            dataParaInput(
+                boleto.data_emissao
+            )
+        );
+
+
+        preencherCampo(
+            "dataEmissaoBoleto",
+            dataParaInput(
+                boleto.data_emissao
+            )
+        );
+
+
+        // =================================================
+        // OBSERVAÇÃO / INSTRUÇÕES
+        // =================================================
+
+        preencherCampo(
+            "instrucoes",
+            boleto.instrucoes || ""
+        );
+
+
+        preencherCampo(
+            "observacoesBoleto",
+            boleto.instrucoes || ""
+        );
+
+
+        preencherCampo(
+            "observacaoBoleto",
+            boleto.instrucoes || ""
+        );
+
+
+        // =================================================
+        // NA EDIÇÃO EXISTE APENAS UM BOLETO
+        // =================================================
+
+        if (qtdParcelas) {
+
+            qtdParcelas.value =
+                1;
+
+
+            qtdParcelas.disabled =
+                true;
+        }
+
+
+        /*
+         * Cria novamente os campos:
+         *
+         * Linha Digitável
+         * Número
+         * Valor
+         * Vencimento
+         */
+
+        criarCamposParcelas();
+
+
+        // =================================================
+        // LINHA DIGITÁVEL
+        // =================================================
+
+        const campoLinhaDigitavel =
+            document.querySelector(
+                ".linhaDigitavelParcela"
+            );
+
+
+        if (campoLinhaDigitavel) {
+
+            campoLinhaDigitavel.value =
+                boleto.linha_digitavel ||
+                "";
+        }
+
+
+        // =================================================
+        // NÚMERO DO BOLETO
+        // =================================================
+
+        const campoNumero =
+            document.querySelector(
+                ".numeroBoletoParcela"
+            );
+
+
+        if (campoNumero) {
+
+            campoNumero.value =
+                boleto.num_boleto ||
+                "";
+        }
+
+
+        // =================================================
+        // VALOR
+        // =================================================
+
+        const campoValor =
+            document.querySelector(
+                ".valorBoletoParcela"
+            );
+
+
+        if (campoValor) {
+
+            campoValor.value =
+                Number(
+                    boleto.valor || 0
+                )
+                    .toFixed(2)
+                    .replace(
+                        ".",
+                        ","
+                    );
+        }
+
+
+        // =================================================
+        // VENCIMENTO
+        // =================================================
+
+        const campoVencimento =
+            document.querySelector(
+                ".dataParcelaCustomizada"
+            );
+
+
+        if (campoVencimento) {
+
+            campoVencimento.value =
+                dataParaInput(
+                    boleto.vencimento
+                );
+        }
+
+
+        // =================================================
+        // MENSAGEM DA LINHA DIGITÁVEL
+        // =================================================
+
+        if (
+            campoLinhaDigitavel &&
+            boleto.linha_digitavel
+        ) {
+
+            mostrarMensagemLinhaDigitavel(
+                campoLinhaDigitavel,
+                "Linha digitável cadastrada.",
+                "#16a34a"
+            );
+        }
+
+
+        // =================================================
         // TÍTULO
-        // =============================================
+        // =================================================
 
         if (tituloPainelBoleto) {
 
@@ -2427,259 +3640,12 @@ window.prepararEdicaoBoleto =
         }
 
 
-        // =============================================
-        // CLIENTE
-        // =============================================
-
-        preencherCampo(
-            "razaoSocialBoleto",
-            boleto.razao_social
-        );
-
-
-        preencherCampo(
-            "cpfCnpjPagador",
-            boleto.pagador_cpf_cnpj
-        );
-
-
-        preencherCampo(
-            "enderecoPagador",
-            boleto.pagador_endereco
-        );
-
-
-        preencherCampo(
-            "numeroPagador",
-            boleto.pagador_numero
-        );
-
-
-        preencherCampo(
-            "cepPagador",
-            boleto.pagador_cep
-        );
-
-
-        // =============================================
-        // DATA
-        // =============================================
-
-        preencherCampo(
-            "dataEmissao",
-            dataParaInput(
-                boleto.data_emissao
-            )
-        );
-
-
-        // =============================================
-        // INSTRUÇÕES
-        // =============================================
-
-        preencherCampo(
-            "instrucoesBoleto",
-            boleto.instrucoes
-        );
-
-
-        // =============================================
-        // EDIÇÃO SEM PARCELAMENTO
-        // =============================================
-
-        if (qtdParcelas) {
-
-            qtdParcelas.value =
-                1;
-
-            qtdParcelas.disabled =
-                true;
-        }
-
-
-        criarCamposParcelas();
-
-
-        // =============================================
-        // PREENCHER BOLETO
-        // =============================================
-
-        const numero =
-            document.querySelector(
-                ".numeroBoletoParcela"
-            );
-
-
-        const valor =
-            document.querySelector(
-                ".valorBoletoParcela"
-            );
-
-
-        const vencimento =
-            document.querySelector(
-                ".dataParcelaCustomizada"
-            );
-
-
-        if (numero) {
-
-            numero.value =
-                boleto.num_boleto ||
-                "";
-        }
-
-
-        if (valor) {
-
-            valor.value =
-                Number(
-                    boleto.valor || 0
-                )
-                    .toFixed(2)
-                    .replace(
-                        ".",
-                        ","
-                    );
-        }
-
-
-        if (vencimento) {
-
-            vencimento.value =
-                dataParaInput(
-                    boleto.vencimento
-                );
-        }
-
+        // =================================================
+        // ABRIR FORMULÁRIO
+        // =================================================
 
         mostrarFormulario();
     };
-
-
-// =========================================================
-// FILTRAR BOLETOS
-// =========================================================
-
-function aplicarFiltros() {
-
-    const cliente =
-        filtroCliente
-            ? normalizarTexto(
-                filtroCliente.value
-            )
-            : "";
-
-
-    const numero =
-        filtroNumero
-            ? normalizarTexto(
-                filtroNumero.value
-            )
-            : "";
-
-
-    const statusSelecionado =
-        filtroStatus
-            ? filtroStatus.value
-            : "";
-
-
-    /*
-     * IMPORTANTE:
-     *
-     * O filtro trabalha em listaBoletosGlobal.
-     *
-     * Para Vendedor, essa lista já contém
-     * SOMENTE os boletos permitidos.
-     */
-
-    const filtrados =
-        listaBoletosGlobal.filter(
-            boleto => {
-
-                const status =
-                    calcularStatusAutomatico(
-                        boleto.vencimento,
-                        boleto.status
-                    );
-
-
-                const clienteOk =
-                    cliente === "" ||
-
-                    normalizarTexto(
-                        boleto.razao_social
-                    )
-                        .includes(
-                            cliente
-                        );
-
-
-                const numeroOk =
-                    numero === "" ||
-
-                    normalizarTexto(
-                        boleto.num_boleto
-                    )
-                        .includes(
-                            numero
-                        );
-
-
-                const statusOk =
-                    statusSelecionado === "" ||
-
-                    normalizarTexto(status) ===
-                    normalizarTexto(
-                        statusSelecionado
-                    );
-
-
-                return (
-                    clienteOk &&
-                    numeroOk &&
-                    statusOk
-                );
-            }
-        );
-
-
-    renderizarTabela(
-        filtrados
-    );
-}
-
-
-// =========================================================
-// EVENTOS DOS FILTROS
-// =========================================================
-
-if (filtroCliente) {
-
-    filtroCliente.addEventListener(
-        "input",
-        aplicarFiltros
-    );
-}
-
-
-if (filtroNumero) {
-
-    filtroNumero.addEventListener(
-        "input",
-        aplicarFiltros
-    );
-}
-
-
-if (filtroStatus) {
-
-    filtroStatus.addEventListener(
-        "change",
-        aplicarFiltros
-    );
-}
 
 
 // =========================================================
@@ -2692,8 +3658,6 @@ if (selecionarTodos) {
         "change",
         () => {
 
-            // Vendedor não pode selecionar.
-
             if (ehVendedor()) {
 
                 selecionarTodos.checked =
@@ -2705,7 +3669,7 @@ if (selecionarTodos) {
 
             const checkboxes =
                 document.querySelectorAll(
-                    ".checkBoleto"
+                    ".checkbox-boleto"
                 );
 
 
@@ -2722,22 +3686,14 @@ if (selecionarTodos) {
 
 
 // =========================================================
-// OBTER IDS SELECIONADOS
+// OBTER BOLETOS SELECIONADOS
 // =========================================================
 
-function obterIdsSelecionados() {
-
-    // Vendedor não executa ações em massa.
-
-    if (ehVendedor()) {
-
-        return [];
-    }
-
+function obterIdsBoletosSelecionados() {
 
     return Array.from(
         document.querySelectorAll(
-            ".checkBoleto:checked"
+            ".checkbox-boleto:checked"
         )
     )
         .map(
@@ -2745,33 +3701,222 @@ function obterIdsSelecionados() {
                 Number(
                     checkbox.value
                 )
+        )
+        .filter(
+            id =>
+                !Number.isNaN(id)
         );
+}
+// =========================================================
+// FILTRAR BOLETOS
+// =========================================================
+
+function filtrarBoletos() {
+
+    const cliente =
+        normalizarTexto(
+            filtroCliente
+                ? filtroCliente.value
+                : ""
+        );
+
+
+    const numero =
+        normalizarTexto(
+            filtroNumero
+                ? filtroNumero.value
+                : ""
+        );
+
+
+    const status =
+        normalizarTexto(
+            filtroStatus
+                ? filtroStatus.value
+                : ""
+        );
+
+
+    const boletosFiltrados =
+        listaBoletosGlobal.filter(
+            boleto => {
+
+                const clienteBoleto =
+                    normalizarTexto(
+                        boleto.razao_social
+                    );
+
+
+                const numeroBoleto =
+                    normalizarTexto(
+                        boleto.num_boleto
+                    );
+
+
+                const statusBoleto =
+                    normalizarTexto(
+                        calcularStatusAutomatico(
+                            boleto.vencimento,
+                            boleto.status
+                        )
+                    );
+
+
+                const correspondeCliente =
+                    !cliente ||
+                    clienteBoleto.includes(
+                        cliente
+                    );
+
+
+                const correspondeNumero =
+                    !numero ||
+                    numeroBoleto.includes(
+                        numero
+                    );
+
+
+                const correspondeStatus =
+                    !status ||
+                    statusBoleto ===
+                    status;
+
+
+                return (
+                    correspondeCliente &&
+                    correspondeNumero &&
+                    correspondeStatus
+                );
+            }
+        );
+
+
+    renderizarTabelaBoletos(
+        boletosFiltrados
+    );
 }
 
 
+// =========================================================
+// EVENTOS DOS FILTROS
+// =========================================================
+
+if (filtroCliente) {
+
+    filtroCliente.addEventListener(
+        "input",
+        filtrarBoletos
+    );
+}
+
+
+if (filtroNumero) {
+
+    filtroNumero.addEventListener(
+        "input",
+        filtrarBoletos
+    );
+}
+
+
+if (filtroStatus) {
+
+    filtroStatus.addEventListener(
+        "change",
+        filtrarBoletos
+    );
+}
+
 
 // =========================================================
-// ALTERAR STATUS DOS BOLETOS
+// LIMPAR FILTROS
 // =========================================================
 
-async function alterarStatusEmLote(novoStatus) {
+const btnLimparFiltros =
+    document.getElementById(
+        "btnLimparFiltros"
+    );
+
+
+if (btnLimparFiltros) {
+
+    btnLimparFiltros.addEventListener(
+        "click",
+        () => {
+
+            if (filtroCliente) {
+
+                filtroCliente.value =
+                    "";
+            }
+
+
+            if (filtroNumero) {
+
+                filtroNumero.value =
+                    "";
+            }
+
+
+            if (filtroStatus) {
+
+                filtroStatus.value =
+                    "";
+            }
+
+
+            renderizarTabelaBoletos(
+                listaBoletosGlobal
+            );
+        }
+    );
+}
+
+
+// =========================================================
+// LOCALIZAR BOLETO PELO ID
+// =========================================================
+
+function encontrarBoletoPorId(id) {
+
+    return (
+        listaBoletosGlobal.find(
+            boleto =>
+                Number(boleto.id) ===
+                Number(id)
+        ) || null
+    );
+}
+
+
+// =========================================================
+// ALTERAR STATUS EM LOTE
+// =========================================================
+
+async function alterarStatusEmLote(
+    novoStatus
+) {
 
     // =====================================================
-    // VENDEDOR NÃO PODE ALTERAR STATUS
+    // BLOQUEIO DO VENDEDOR
     // =====================================================
 
     if (ehVendedor()) {
 
         alert(
-            "O vendedor possui acesso somente à consulta e ao relatório."
+            "O vendedor não possui permissão para alterar o status dos boletos."
         );
 
         return;
     }
 
 
+    // =====================================================
+    // BOLETOS SELECIONADOS
+    // =====================================================
+
     const ids =
-        obterIdsSelecionados();
+        obterIdsBoletosSelecionados();
 
 
     if (ids.length === 0) {
@@ -2784,33 +3929,16 @@ async function alterarStatusEmLote(novoStatus) {
     }
 
 
+    // =====================================================
+    // MOTIVO DA BAIXA
+    // =====================================================
+
     let motivoBaixa = null;
 
 
-    // =====================================================
-    // PAGAMENTO
-    // =====================================================
-
-    if (novoStatus === "Pago") {
-
-        const confirmar =
-            confirm(
-                `Deseja marcar ${ids.length} boleto(s) como Pago?`
-            );
-
-
-        if (!confirmar) {
-
-            return;
-        }
-    }
-
-
-    // =====================================================
-    // BAIXA
-    // =====================================================
-
-    if (novoStatus === "Baixa") {
+    if (
+        novoStatus === "Baixa"
+    ) {
 
         motivoBaixa =
             prompt(
@@ -2839,83 +3967,182 @@ async function alterarStatusEmLote(novoStatus) {
     }
 
 
-    try {
+    // =====================================================
+    // CONFIRMAÇÃO
+    // =====================================================
 
-        for (const id of ids) {
-
-            const boleto =
-                listaBoletosGlobal.find(
-                    item =>
-                        Number(item.id) ===
-                        Number(id)
-                );
+    let mensagemConfirmacao = "";
 
 
-            if (!boleto) {
+    if (
+        novoStatus === "Pago"
+    ) {
 
-                continue;
-            }
+        mensagemConfirmacao =
+            ids.length === 1
+
+                ? "Deseja marcar o boleto selecionado como Pago?"
+
+                : `Deseja marcar os ${ids.length} boletos selecionados como Pagos?`;
+
+    } else {
+
+        mensagemConfirmacao =
+            ids.length === 1
+
+                ? "Deseja dar baixa no boleto selecionado?"
+
+                : `Deseja dar baixa nos ${ids.length} boletos selecionados?`;
+    }
 
 
-            const dados = {
+    const confirmar =
+        confirm(
+            mensagemConfirmacao
+        );
 
-                razao_social:
-                    boleto.razao_social,
 
-                num_boleto:
-                    boleto.num_boleto,
+    if (!confirmar) {
 
-                valor:
-                    boleto.valor,
+        return;
+    }
 
-                data_emissao:
-                    dataParaInput(
-                        boleto.data_emissao
-                    ),
 
-                vencimento:
-                    dataParaInput(
-                        boleto.vencimento
-                    ),
+    // =====================================================
+    // DESABILITAR BOTÕES
+    // =====================================================
 
-                vendedor:
-                    boleto.vendedor || "",
+    if (btnMarcarPagosMassa) {
 
-                status:
-                    novoStatus,
+        btnMarcarPagosMassa.disabled =
+            true;
+    }
 
-                motivo_baixa:
-                    novoStatus === "Baixa"
-                        ? motivoBaixa
-                        : null,
 
-                pagador_cpf_cnpj:
-                    boleto.pagador_cpf_cnpj || "",
+    if (btnDarBaixaMassa) {
 
-                pagador_endereco:
-                    boleto.pagador_endereco || "",
+        btnDarBaixaMassa.disabled =
+            true;
+    }
 
-                pagador_numero:
-                    boleto.pagador_numero || "",
 
-                pagador_cep:
-                    boleto.pagador_cep || "",
+    let quantidadeSucesso = 0;
 
-                instrucoes:
-                    boleto.instrucoes || "",
+    let quantidadeErro = 0;
 
-                usuario_logado:
-                    usuarioLogado.nome ||
-                    usuarioLogado.usuario ||
-                    "Sistema"
-            };
 
+    // =====================================================
+    // ATUALIZAR CADA BOLETO
+    // =====================================================
+
+    for (const id of ids) {
+
+        const boleto =
+            encontrarBoletoPorId(
+                id
+            );
+
+
+        if (!boleto) {
+
+            quantidadeErro++;
+
+            continue;
+        }
+
+
+        /*
+         * IMPORTANTE:
+         *
+         * Como a rota PUT do backend atualiza
+         * os dados completos do boleto,
+         * reenviamos todos os campos.
+         *
+         * A linha_digitavel também é reenviada
+         * para não ser apagada quando o status
+         * for alterado.
+         */
+
+        const dados = {
+
+            razao_social:
+                boleto.razao_social ||
+                "",
+
+            num_boleto:
+                boleto.num_boleto ||
+                "",
+
+            // ---------------------------------------------
+            // PRESERVAR LINHA DIGITÁVEL
+            // ---------------------------------------------
+
+            linha_digitavel:
+                boleto.linha_digitavel ||
+                null,
+
+            valor:
+                Number(
+                    boleto.valor || 0
+                ),
+
+            data_emissao:
+                dataParaInput(
+                    boleto.data_emissao
+                ),
+
+            vencimento:
+                dataParaInput(
+                    boleto.vencimento
+                ),
+
+            vendedor:
+                boleto.vendedor ||
+                "",
+
+            status:
+                novoStatus,
+
+            motivo_baixa:
+                novoStatus === "Baixa"
+                    ? motivoBaixa
+                    : null,
+
+            pagador_cpf_cnpj:
+                boleto.pagador_cpf_cnpj ||
+                "",
+
+            pagador_endereco:
+                boleto.pagador_endereco ||
+                "",
+
+            pagador_numero:
+                boleto.pagador_numero ||
+                "",
+
+            pagador_cep:
+                boleto.pagador_cep ||
+                "",
+
+            instrucoes:
+                boleto.instrucoes ||
+                "",
+
+            usuario_logado:
+                usuarioLogado.nome ||
+                usuarioLogado.usuario ||
+                "Sistema"
+        };
+
+
+        try {
 
             const resposta =
                 await fetch(
                     `${API_URL}/api/boletos/${id}`,
                     {
-                        method: "PUT",
+                        method:
+                            "PUT",
 
                         headers:
                             obterHeadersAPI(),
@@ -2928,66 +4155,127 @@ async function alterarStatusEmLote(novoStatus) {
                 );
 
 
-            const retorno =
-                await resposta
-                    .json()
-                    .catch(
-                        () => ({})
-                    );
-
-
             if (!resposta.ok) {
+
+                const retorno =
+                    await resposta
+                        .json()
+                        .catch(
+                            () => ({})
+                        );
+
 
                 throw new Error(
                     retorno.erro ||
-                    `Erro ao atualizar o boleto ${id}.`
+                    `Erro ao atualizar boleto ${id}.`
                 );
             }
+
+
+            quantidadeSucesso++;
+
+
+        } catch (erro) {
+
+            quantidadeErro++;
+
+
+            console.error(
+                `Erro ao atualizar boleto ${id}:`,
+                erro
+            );
         }
+    }
 
 
-        if (novoStatus === "Pago") {
+    // =====================================================
+    // REATIVAR BOTÕES
+    // =====================================================
+
+    if (btnMarcarPagosMassa) {
+
+        btnMarcarPagosMassa.disabled =
+            false;
+    }
+
+
+    if (btnDarBaixaMassa) {
+
+        btnDarBaixaMassa.disabled =
+            false;
+    }
+
+
+    // =====================================================
+    // RESULTADO
+    // =====================================================
+
+    if (
+        quantidadeSucesso > 0 &&
+        quantidadeErro === 0
+    ) {
+
+        if (
+            novoStatus === "Pago"
+        ) {
 
             alert(
-                "Boleto(s) marcado(s) como Pago com sucesso!"
+                quantidadeSucesso === 1
+
+                    ? "Boleto marcado como Pago com sucesso."
+
+                    : `${quantidadeSucesso} boletos marcados como Pagos com sucesso.`
             );
 
         } else {
 
             alert(
-                "Baixa realizada com sucesso!"
+                quantidadeSucesso === 1
+
+                    ? "Baixa realizada com sucesso."
+
+                    : `${quantidadeSucesso} boletos receberam baixa com sucesso.`
             );
         }
 
-
-        if (selecionarTodos) {
-
-            selecionarTodos.checked =
-                false;
-        }
-
-
-        await carregarBoletos();
-
-
-    } catch (erro) {
-
-        console.error(
-            "Erro ao alterar status:",
-            erro
-        );
-
+    } else if (
+        quantidadeSucesso > 0 &&
+        quantidadeErro > 0
+    ) {
 
         alert(
-            erro.message ||
-            "Erro ao atualizar boleto."
+            `${quantidadeSucesso} boleto(s) atualizado(s) com sucesso e ${quantidadeErro} com erro.`
+        );
+
+    } else {
+
+        alert(
+            "Não foi possível atualizar os boletos selecionados."
         );
     }
+
+
+    // =====================================================
+    // DESMARCAR SELEÇÃO
+    // =====================================================
+
+    if (selecionarTodos) {
+
+        selecionarTodos.checked =
+            false;
+    }
+
+
+    // =====================================================
+    // RECARREGAR
+    // =====================================================
+
+    await carregarBoletos();
 }
 
 
 // =========================================================
-// BOTÃO MARCAR COMO PAGO
+// MARCAR COMO PAGO
 // =========================================================
 
 if (btnMarcarPagosMassa) {
@@ -3005,7 +4293,7 @@ if (btnMarcarPagosMassa) {
 
 
 // =========================================================
-// BOTÃO DAR BAIXA
+// DAR BAIXA
 // =========================================================
 
 if (btnDarBaixaMassa) {
@@ -3023,20 +4311,186 @@ if (btnDarBaixaMassa) {
 
 
 // =========================================================
-// BOLETOS PERMITIDOS PARA O RELATÓRIO
+// IMPEDIR AÇÕES DO VENDEDOR
 // =========================================================
 
-function obterBoletosParaRelatorio() {
+function aplicarRestricoesVendedor() {
+
+    if (!ehVendedor()) {
+
+        return;
+    }
+
+
+    // =====================================================
+    // NOVO BOLETO
+    // =====================================================
+
+    if (btnNovoBoleto) {
+
+        btnNovoBoleto.style.display =
+            "none";
+    }
+
+
+    const containerBtnNovo =
+        document.getElementById(
+            "containerBtnNovo"
+        );
+
+
+    if (containerBtnNovo) {
+
+        containerBtnNovo.style.display =
+            "none";
+    }
+
+
+    // =====================================================
+    // AÇÕES EM MASSA
+    // =====================================================
+
+    if (btnMarcarPagosMassa) {
+
+        btnMarcarPagosMassa.style.display =
+            "none";
+    }
+
+
+    if (btnDarBaixaMassa) {
+
+        btnDarBaixaMassa.style.display =
+            "none";
+    }
+
+
+    // =====================================================
+    // SELECIONAR TODOS
+    // =====================================================
+
+    if (selecionarTodos) {
+
+        selecionarTodos.style.display =
+            "none";
+    }
+
 
     /*
-     * IMPORTANTE:
-     *
-     * listaBoletosGlobal já foi preenchida
-     * na Parte 2.
-     *
-     * Para Vendedor ela já contém somente
-     * os boletos permitidos.
+     * Caso o cabeçalho da tabela tenha
+     * uma célula específica para seleção,
+     * mantemos apenas a estrutura da tabela.
      */
+}
+
+
+// =========================================================
+// DESMARCAR TODOS OS BOLETOS
+// =========================================================
+
+function desmarcarTodosBoletos() {
+
+    const checkboxes =
+        document.querySelectorAll(
+            ".checkbox-boleto"
+        );
+
+
+    checkboxes.forEach(
+        checkbox => {
+
+            checkbox.checked =
+                false;
+        }
+    );
+
+
+    if (selecionarTodos) {
+
+        selecionarTodos.checked =
+            false;
+    }
+}
+
+
+// =========================================================
+// ATUALIZAR SELECIONAR TODOS
+// =========================================================
+
+document.addEventListener(
+    "change",
+    evento => {
+
+        if (
+            !evento.target ||
+            !evento.target.classList.contains(
+                "checkbox-boleto"
+            )
+        ) {
+
+            return;
+        }
+
+
+        if (!selecionarTodos) {
+
+            return;
+        }
+
+
+        const checkboxes =
+            Array.from(
+                document.querySelectorAll(
+                    ".checkbox-boleto"
+                )
+            );
+
+
+        if (
+            checkboxes.length === 0
+        ) {
+
+            selecionarTodos.checked =
+                false;
+
+            return;
+        }
+
+
+        selecionarTodos.checked =
+            checkboxes.every(
+                checkbox =>
+                    checkbox.checked
+            );
+    }
+);
+
+
+// =========================================================
+// STATUS PARA RELATÓRIO/FILTRO
+// =========================================================
+
+function obterStatusBoleto(
+    boleto
+) {
+
+    if (!boleto) {
+
+        return "Pendente";
+    }
+
+
+    return calcularStatusAutomatico(
+        boleto.vencimento,
+        boleto.status
+    );
+}
+
+
+// =========================================================
+// BOLETOS VISÍVEIS PARA O USUÁRIO
+// =========================================================
+
+function obterBoletosPermitidos() {
 
     if (!ehVendedor()) {
 
@@ -3056,99 +4510,486 @@ function obterBoletosParaRelatorio() {
 
 
 // =========================================================
-// IMPRIMIR RELATÓRIO
+// APLICAR FILTRO DE STATUS EM UMA LISTA
 // =========================================================
 
-function imprimirRelatorioBoletos() {
+function filtrarListaPorStatus(
+    lista,
+    statusDesejado
+) {
 
-    const boletos =
-        obterBoletosParaRelatorio();
+    if (!statusDesejado) {
 
+        return lista;
+    }
+
+
+    const statusNormalizado =
+        normalizarTexto(
+            statusDesejado
+        );
+
+
+    return lista.filter(
+        boleto => {
+
+            return (
+                normalizarTexto(
+                    obterStatusBoleto(
+                        boleto
+                    )
+                ) ===
+                statusNormalizado
+            );
+        }
+    );
+}
+
+
+// =========================================================
+// ORDENAR BOLETOS POR VENCIMENTO
+// =========================================================
+
+function ordenarBoletosPorVencimento(
+    lista
+) {
+
+    return [
+        ...lista
+    ].sort(
+        (a, b) => {
+
+            const dataA =
+                new Date(
+                    dataParaInput(
+                        a.vencimento
+                    ) +
+                    "T00:00:00"
+                );
+
+
+            const dataB =
+                new Date(
+                    dataParaInput(
+                        b.vencimento
+                    ) +
+                    "T00:00:00"
+                );
+
+
+            return (
+                dataA -
+                dataB
+            );
+        }
+    );
+}
+
+
+// =========================================================
+// TOTALIZAR BOLETOS
+// =========================================================
+
+function calcularTotalBoletos(
+    lista
+) {
+
+    return lista.reduce(
+        (
+            total,
+            boleto
+        ) => {
+
+            return (
+                total +
+                Number(
+                    boleto.valor || 0
+                )
+            );
+        },
+        0
+    );
+}
+
+
+// =========================================================
+// RELATÓRIOS
+// =========================================================
+
+const modalRelatorio =
+    document.getElementById(
+        "modalRelatorio"
+    );
+
+
+const btnRelatorio =
+    document.getElementById(
+        "btnRelatorio"
+    );
+
+
+const btnFecharRelatorio =
+    document.getElementById(
+        "btnFecharRelatorio"
+    );
+
+
+const btnImprimirRelatorio =
+    document.getElementById(
+        "btnImprimirRelatorio"
+    );
+
+
+// =========================================================
+// ABRIR RELATÓRIO
+// =========================================================
+
+function abrirRelatorio() {
+
+    if (!modalRelatorio) {
+
+        /*
+         * Caso o HTML não possua modal,
+         * imprime diretamente.
+         */
+
+        imprimirRelatorioBoletos();
+
+        return;
+    }
+
+
+    modalRelatorio.style.display =
+        "flex";
+}
+
+
+// =========================================================
+// FECHAR RELATÓRIO
+// =========================================================
+
+function fecharRelatorio() {
+
+    if (modalRelatorio) {
+
+        modalRelatorio.style.display =
+            "none";
+    }
+}
+
+
+// =========================================================
+// EVENTOS DO RELATÓRIO
+// =========================================================
+
+if (btnRelatorio) {
+
+    btnRelatorio.addEventListener(
+        "click",
+        abrirRelatorio
+    );
+}
+
+
+if (btnFecharRelatorio) {
+
+    btnFecharRelatorio.addEventListener(
+        "click",
+        fecharRelatorio
+    );
+}
+
+
+// =========================================================
+// FECHAR MODAL CLICANDO FORA
+// =========================================================
+
+if (modalRelatorio) {
+
+    modalRelatorio.addEventListener(
+        "click",
+        evento => {
+
+            if (
+                evento.target ===
+                modalRelatorio
+            ) {
+
+                fecharRelatorio();
+            }
+        }
+    );
+}
+
+
+// =========================================================
+// OBTER VALOR DE CAMPO DE RELATÓRIO
+// =========================================================
+
+function obterValorCampoRelatorio(
+    ids
+) {
+
+    for (const id of ids) {
+
+        const campo =
+            document.getElementById(
+                id
+            );
+
+
+        if (
+            campo &&
+            campo.value
+        ) {
+
+            return campo.value;
+        }
+    }
+
+
+    return "";
+}
+
+
+// =========================================================
+// FILTRAR BOLETOS PARA RELATÓRIO
+// =========================================================
+
+function obterBoletosRelatorio() {
+
+    let boletos =
+        obterBoletosPermitidos();
+
+
+    // =====================================================
+    // DATA INICIAL
+    // =====================================================
+
+    const dataInicial =
+        obterValorCampoRelatorio([
+            "relatorioDataInicial",
+            "dataInicialRelatorio",
+            "dataInicioRelatorio"
+        ]);
+
+
+    // =====================================================
+    // DATA FINAL
+    // =====================================================
+
+    const dataFinal =
+        obterValorCampoRelatorio([
+            "relatorioDataFinal",
+            "dataFinalRelatorio",
+            "dataFimRelatorio"
+        ]);
+
+
+    // =====================================================
+    // STATUS
+    // =====================================================
+
+    const statusRelatorio =
+        obterValorCampoRelatorio([
+            "relatorioStatus",
+            "statusRelatorio"
+        ]);
+
+
+    // =====================================================
+    // CLIENTE
+    // =====================================================
+
+    const clienteRelatorio =
+        obterValorCampoRelatorio([
+            "relatorioCliente",
+            "clienteRelatorio"
+        ]);
+
+
+    // =====================================================
+    // FILTRO DE CLIENTE
+    // =====================================================
+
+    if (clienteRelatorio) {
+
+        const clienteNormalizado =
+            normalizarTexto(
+                clienteRelatorio
+            );
+
+
+        boletos =
+            boletos.filter(
+                boleto => {
+
+                    return normalizarTexto(
+                        boleto.razao_social
+                    ).includes(
+                        clienteNormalizado
+                    );
+                }
+            );
+    }
+
+
+    // =====================================================
+    // FILTRO DE STATUS
+    // =====================================================
+
+    if (statusRelatorio) {
+
+        boletos =
+            filtrarListaPorStatus(
+                boletos,
+                statusRelatorio
+            );
+    }
+
+
+    // =====================================================
+    // FILTRO DE DATA
+    // =====================================================
+
+    if (dataInicial) {
+
+        boletos =
+            boletos.filter(
+                boleto => {
+
+                    const vencimento =
+                        dataParaInput(
+                            boleto.vencimento
+                        );
+
+
+                    return (
+                        vencimento >=
+                        dataInicial
+                    );
+                }
+            );
+    }
+
+
+    if (dataFinal) {
+
+        boletos =
+            boletos.filter(
+                boleto => {
+
+                    const vencimento =
+                        dataParaInput(
+                            boleto.vencimento
+                        );
+
+
+                    return (
+                        vencimento <=
+                        dataFinal
+                    );
+                }
+            );
+    }
+
+
+    return ordenarBoletosPorVencimento(
+        boletos
+    );
+}
+
+
+// =========================================================
+// ESCAPAR HTML PARA RELATÓRIO
+// =========================================================
+
+function escaparHTML(valor) {
+
+    return String(
+        valor ?? ""
+    )
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+        .replace(
+            /</g,
+            "&lt;"
+        )
+        .replace(
+            />/g,
+            "&gt;"
+        )
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+}
+
+
+// =========================================================
+// GERAR LINHAS DO RELATÓRIO
+// =========================================================
+
+function gerarLinhasRelatorio(
+    boletos
+) {
 
     if (
         !boletos ||
         boletos.length === 0
     ) {
 
-        alert(
-            "Nenhum boleto disponível para impressão."
-        );
-
-        return;
+        return `
+            <tr>
+                <td
+                    colspan="6"
+                    style="
+                        text-align:center;
+                        padding:15px;
+                    "
+                >
+                    Nenhum boleto encontrado.
+                </td>
+            </tr>
+        `;
     }
 
 
-    let total = 0;
-
-
-    let totalPendentes = 0;
-
-    let totalVencidos = 0;
-
-    let totalPagos = 0;
-
-    let totalBaixa = 0;
-
-
-    const linhas =
-        boletos
-            .map(boleto => {
-
-                const valor =
-                    Number(
-                        boleto.valor || 0
-                    );
-
-
-                total += valor;
-
+    return boletos
+        .map(
+            boleto => {
 
                 const status =
-                    calcularStatusAutomatico(
-                        boleto.vencimento,
-                        boleto.status
+                    obterStatusBoleto(
+                        boleto
                     );
-
-
-                if (status === "Pago") {
-
-                    totalPagos++;
-
-                } else if (
-                    status === "Vencido"
-                ) {
-
-                    totalVencidos++;
-
-                } else if (
-                    status === "Baixa"
-                ) {
-
-                    totalBaixa++;
-
-                } else {
-
-                    totalPendentes++;
-                }
 
 
                 return `
                     <tr>
 
                         <td>
-                            ${boleto.id || "-"}
+                            ${escaparHTML(
+                                boleto.razao_social
+                            )}
                         </td>
 
                         <td>
-                            ${boleto.razao_social || "-"}
+                            ${escaparHTML(
+                                boleto.num_boleto
+                            )}
                         </td>
 
                         <td>
-                            ${boleto.num_boleto || "-"}
-                        </td>
-
-                        <td>
-                            ${formatarMoeda(valor)}
+                            ${formatarMoeda(
+                                boleto.valor
+                            )}
                         </td>
 
                         <td>
@@ -3164,13 +5005,77 @@ function imprimirRelatorioBoletos() {
                         </td>
 
                         <td>
-                            ${status}
+                            ${escaparHTML(
+                                status
+                            )}
                         </td>
-
                     </tr>
                 `;
-            })
-            .join("");
+            }
+        )
+        .join("");
+}
+// =========================================================
+// IMPRIMIR RELATÓRIO DE BOLETOS
+// =========================================================
+
+function imprimirRelatorioBoletos() {
+
+    const boletos =
+        obterBoletosRelatorio();
+
+
+    if (
+        boletos.length === 0
+    ) {
+
+        alert(
+            "Nenhum boleto encontrado para o relatório."
+        );
+
+        return;
+    }
+
+
+    const total =
+        calcularTotalBoletos(
+            boletos
+        );
+
+
+    const quantidade =
+        boletos.length;
+
+
+    const nomeUsuario =
+        usuarioLogado.nome ||
+        usuarioLogado.usuario ||
+        "Usuário";
+
+
+    const perfilUsuario =
+        usuarioLogado.permissao ||
+        "";
+
+
+    const agora =
+        new Date();
+
+
+    const dataGeracao =
+        agora.toLocaleDateString(
+            "pt-BR"
+        );
+
+
+    const horaGeracao =
+        agora.toLocaleTimeString(
+            "pt-BR",
+            {
+                hour: "2-digit",
+                minute: "2-digit"
+            }
+        );
 
 
     const janela =
@@ -3183,19 +5088,17 @@ function imprimirRelatorioBoletos() {
     if (!janela) {
 
         alert(
-            "Não foi possível abrir a janela de impressão."
+            "Não foi possível abrir a janela de impressão. Verifique se o navegador bloqueou pop-ups."
         );
 
         return;
     }
 
 
-    const titulo =
-        ehVendedor()
-
-            ? "Relatório de Boletos dos Meus Clientes"
-
-            : "Relatório de Boletos";
+    const linhas =
+        gerarLinhasRelatorio(
+            boletos
+        );
 
 
     janela.document.write(`
@@ -3208,7 +5111,7 @@ function imprimirRelatorioBoletos() {
             <meta charset="UTF-8">
 
             <title>
-                ${titulo}
+                Relatório de Boletos
             </title>
 
             <style>
@@ -3218,9 +5121,12 @@ function imprimirRelatorioBoletos() {
                 }
 
                 body {
-                    font-family: Arial, sans-serif;
+                    font-family:
+                        Arial,
+                        Helvetica,
+                        sans-serif;
+                    margin: 30px;
                     color: #1e293b;
-                    padding: 25px;
                 }
 
                 h1 {
@@ -3229,38 +5135,52 @@ function imprimirRelatorioBoletos() {
                 }
 
                 .subtitulo {
-                    margin: 0 0 20px 0;
                     color: #64748b;
+                    margin-bottom: 20px;
                 }
 
-                .usuario {
+                .informacoes {
+                    display: flex;
+                    justify-content: space-between;
+                    gap: 20px;
                     margin-bottom: 20px;
-                    line-height: 1.7;
+                    font-size: 12px;
                 }
 
                 .resumo {
                     display: flex;
                     gap: 15px;
-                    flex-wrap: wrap;
                     margin-bottom: 20px;
                 }
 
-                .resumo div {
+                .card {
                     border: 1px solid #cbd5e1;
                     border-radius: 6px;
-                    padding: 8px 12px;
+                    padding: 10px 15px;
+                    min-width: 160px;
+                }
+
+                .card span {
+                    display: block;
+                    color: #64748b;
+                    font-size: 11px;
+                    margin-bottom: 4px;
+                }
+
+                .card strong {
+                    font-size: 16px;
                 }
 
                 table {
                     width: 100%;
                     border-collapse: collapse;
+                    font-size: 11px;
                 }
 
                 th,
                 td {
                     border: 1px solid #cbd5e1;
-                    padding: 7px;
-                    font-size: 11px;
+                    padding: 8px;
                     text-align: left;
                 }
 
@@ -3268,23 +5188,20 @@ function imprimirRelatorioBoletos() {
                     background: #f1f5f9;
                 }
 
-                .total {
-                    margin-top: 18px;
-                    text-align: right;
-                    font-size: 16px;
-                    font-weight: bold;
-                }
-
-                .data-impressao {
-                    margin-top: 10px;
+                .rodape {
+                    margin-top: 20px;
                     color: #64748b;
-                    font-size: 11px;
+                    font-size: 10px;
                 }
 
                 @media print {
 
                     body {
-                        padding: 0;
+                        margin: 10px;
+                    }
+
+                    .nao-imprimir {
+                        display: none;
                     }
                 }
 
@@ -3295,65 +5212,68 @@ function imprimirRelatorioBoletos() {
         <body>
 
             <h1>
-                ${titulo}
+                ControleBoleto
             </h1>
 
-            <p class="subtitulo">
-                ControleBoleto
-            </p>
+            <div class="subtitulo">
+                Relatório de Boletos
+            </div>
 
 
-            <div class="usuario">
+            <div class="informacoes">
 
-                <strong>
-                    Usuário:
-                </strong>
+                <div>
+                    <strong>Usuário:</strong>
+                    ${escaparHTML(
+                        nomeUsuario
+                    )}
 
-                ${
-                    usuarioLogado.nome ||
-                    usuarioLogado.usuario ||
-                    "Usuário"
-                }
+                    <br>
 
-                <br>
+                    <strong>Perfil:</strong>
+                    ${escaparHTML(
+                        perfilUsuario
+                    )}
+                </div>
 
-                <strong>
-                    Perfil:
-                </strong>
 
-                ${
-                    usuarioLogado.permissao ||
-                    "-"
-                }
+                <div>
+                    <strong>Gerado em:</strong>
+                    ${dataGeracao}
+                    às
+                    ${horaGeracao}
+                </div>
 
             </div>
 
 
             <div class="resumo">
 
-                <div>
-                    <strong>Total de boletos:</strong>
-                    ${boletos.length}
+                <div class="card">
+
+                    <span>
+                        Quantidade de boletos
+                    </span>
+
+                    <strong>
+                        ${quantidade}
+                    </strong>
+
                 </div>
 
-                <div>
-                    <strong>Pendentes:</strong>
-                    ${totalPendentes}
-                </div>
 
-                <div>
-                    <strong>Vencidos:</strong>
-                    ${totalVencidos}
-                </div>
+                <div class="card">
 
-                <div>
-                    <strong>Pagos:</strong>
-                    ${totalPagos}
-                </div>
+                    <span>
+                        Valor total
+                    </span>
 
-                <div>
-                    <strong>Baixa:</strong>
-                    ${totalBaixa}
+                    <strong>
+                        ${formatarMoeda(
+                            total
+                        )}
+                    </strong>
+
                 </div>
 
             </div>
@@ -3364,10 +5284,6 @@ function imprimirRelatorioBoletos() {
                 <thead>
 
                     <tr>
-
-                        <th>
-                            Código
-                        </th>
 
                         <th>
                             Cliente
@@ -3407,22 +5323,10 @@ function imprimirRelatorioBoletos() {
             </table>
 
 
-            <div class="total">
+            <div class="rodape">
 
-                Total:
-
-                ${formatarMoeda(total)}
-
-            </div>
-
-
-            <div class="data-impressao">
-
-                Impresso em:
-
-                ${new Date().toLocaleString(
-                    "pt-BR"
-                )}
+                ControleBoleto —
+                Sistema Web para Controle de Boletos e Cobranças.
 
             </div>
 
@@ -3435,13 +5339,13 @@ function imprimirRelatorioBoletos() {
     janela.document.close();
 
 
+    janela.focus();
+
+
     setTimeout(
         () => {
 
-            janela.focus();
-
             janela.print();
-
         },
         300
     );
@@ -3449,124 +5353,124 @@ function imprimirRelatorioBoletos() {
 
 
 // =========================================================
-// LOCALIZAR BOTÃO DE RELATÓRIO
+// BOTÃO IMPRIMIR RELATÓRIO
 // =========================================================
 
-const btnRelatorio =
-    document.getElementById(
-        "btnRelatorio"
-    ) ||
+if (btnImprimirRelatorio) {
 
-    document.getElementById(
-        "btnImprimirRelatorio"
-    ) ||
-
-    document.getElementById(
-        "btnImprimir"
-    );
-
-
-// =========================================================
-// EVENTO DO RELATÓRIO
-// =========================================================
-
-if (btnRelatorio) {
-
-    btnRelatorio.addEventListener(
+    btnImprimirRelatorio.addEventListener(
         "click",
         imprimirRelatorioBoletos
     );
 }
 
 
-// Deixa disponível caso o HTML utilize onclick.
+// =========================================================
+// COMPATIBILIDADE COM BOTÕES DE RELATÓRIO
+// =========================================================
 
-window.imprimirRelatorioBoletos =
-    imprimirRelatorioBoletos;
+const btnRelatorioAgendados =
+    document.getElementById(
+        "btnRelatorioAgendados"
+    );
 
 
-window.gerarRelatorioBoletos =
-    imprimirRelatorioBoletos;
+const btnRelatorioClientes =
+    document.getElementById(
+        "btnRelatorioClientes"
+    );
+
+
+if (btnRelatorioAgendados) {
+
+    btnRelatorioAgendados.addEventListener(
+        "click",
+        () => {
+
+            imprimirRelatorioBoletos();
+        }
+    );
+}
+
+
+if (btnRelatorioClientes) {
+
+    btnRelatorioClientes.addEventListener(
+        "click",
+        () => {
+
+            imprimirRelatorioBoletos();
+        }
+    );
+}
 
 
 // =========================================================
-// CONFIGURAR PERMISSÕES VISUAIS
+// APLICAR PERMISSÕES DA PÁGINA
 // =========================================================
 
-function configurarPermissoesTela() {
+function aplicarPermissoesPagina() {
 
-    if (!ehVendedor()) {
+    const permissao =
+        obterPermissaoUsuario();
+
+
+    // =====================================================
+    // ADMINISTRADOR
+    // =====================================================
+
+    if (
+        permissao ===
+        "administrador"
+    ) {
 
         return;
     }
 
 
-    console.log(
-        "Aplicando modo de consulta do Vendedor."
+    // =====================================================
+    // OPERADOR
+    // =====================================================
+
+    if (
+        permissao ===
+        "operador"
+    ) {
+
+        return;
+    }
+
+
+    // =====================================================
+    // VENDEDOR
+    // =====================================================
+
+    if (
+        permissao ===
+        "vendedor"
+    ) {
+
+        aplicarRestricoesVendedor();
+
+        return;
+    }
+
+
+    console.warn(
+        "Permissão não reconhecida:",
+        usuarioLogado.permissao
     );
+}
 
 
-    // =====================================================
-    // NOVO BOLETO
-    // =====================================================
+// =========================================================
+// AJUSTAR TELA INICIAL
+// =========================================================
 
-    if (btnNovoBoleto) {
-
-        btnNovoBoleto.style.display =
-            "none";
-
-        btnNovoBoleto.disabled =
-            true;
-    }
-
+function prepararTelaInicial() {
 
     // =====================================================
-    // PAGAMENTO
-    // =====================================================
-
-    if (btnMarcarPagosMassa) {
-
-        btnMarcarPagosMassa.style.display =
-            "none";
-
-        btnMarcarPagosMassa.disabled =
-            true;
-    }
-
-
-    // =====================================================
-    // BAIXA
-    // =====================================================
-
-    if (btnDarBaixaMassa) {
-
-        btnDarBaixaMassa.style.display =
-            "none";
-
-        btnDarBaixaMassa.disabled =
-            true;
-    }
-
-
-    // =====================================================
-    // SELECIONAR TODOS
-    // =====================================================
-
-    if (selecionarTodos) {
-
-        selecionarTodos.style.display =
-            "none";
-
-        selecionarTodos.checked =
-            false;
-
-        selecionarTodos.disabled =
-            true;
-    }
-
-
-    // =====================================================
-    // PAINEL DE CADASTRO
+    // FORMULÁRIO COMEÇA FECHADO
     // =====================================================
 
     if (painelCadastroBoleto) {
@@ -3577,7 +5481,7 @@ function configurarPermissoesTela() {
 
 
     // =====================================================
-    // TABELA
+    // TABELA VISÍVEL
     // =====================================================
 
     if (secaoTabela) {
@@ -3587,10 +5491,6 @@ function configurarPermissoesTela() {
     }
 
 
-    // =====================================================
-    // FILTROS
-    // =====================================================
-
     if (secaoFiltros) {
 
         secaoFiltros.style.display =
@@ -3599,264 +5499,85 @@ function configurarPermissoesTela() {
 
 
     // =====================================================
-    // MENU USUÁRIOS
+    // CAMPOS INICIAIS DO BOLETO
     // =====================================================
 
-    const linkUsuarios =
-        document.querySelector(
-            'a[href*="usuarios.html"]'
-        );
-
-
-    if (linkUsuarios) {
-
-        const itemMenu =
-            linkUsuarios.closest("li");
-
-
-        if (itemMenu) {
-
-            itemMenu.style.display =
-                "none";
-
-        } else {
-
-            linkUsuarios.style.display =
-                "none";
-        }
-    }
-}
-
-
-// =========================================================
-// PROTEÇÃO EXTRA DO VENDEDOR
-// =========================================================
-
-function protegerAcoesVendedor() {
-
-    if (!ehVendedor()) {
-
-        return;
-    }
-
-
-    if (btnNovoBoleto) {
-
-        btnNovoBoleto.style.display =
-            "none";
-    }
-
-
-    if (btnMarcarPagosMassa) {
-
-        btnMarcarPagosMassa.style.display =
-            "none";
-    }
-
-
-    if (btnDarBaixaMassa) {
-
-        btnDarBaixaMassa.style.display =
-            "none";
-    }
-
-
-    /*
-     * IMPORTANTE:
-     *
-     * Não escondemos o botão de relatório.
-     *
-     * O vendedor PODE imprimir relatório,
-     * mas somente dos boletos dos clientes dele.
-     */
-}
-
-
-// =========================================================
-// TECLA ESC
-// =========================================================
-
-document.addEventListener(
-    "keydown",
-    evento => {
+    if (qtdParcelas) {
 
         if (
-            evento.key === "Escape" &&
-            !ehVendedor()
+            !qtdParcelas.value ||
+            Number(
+                qtdParcelas.value
+            ) < 1
         ) {
 
-            fecharFormulario();
+            qtdParcelas.value =
+                1;
         }
     }
-);
+
+
+    criarCamposParcelas();
+}
 
 
 // =========================================================
-// INICIALIZAÇÃO DA PÁGINA
+// INICIALIZAÇÃO
 // =========================================================
 
-async function iniciarPagina() {
-
-    console.log(
-        "======================================"
-    );
-
-    console.log(
-        "INICIANDO BOLETOS"
-    );
-
-    console.log(
-        "Usuário:",
-        usuarioLogado.nome
-    );
-
-    console.log(
-        "ID:",
-        usuarioLogado.id
-    );
-
-    console.log(
-        "Permissão:",
-        usuarioLogado.permissao
-    );
-
-    console.log(
-        "======================================"
-    );
-
-
-    // =====================================================
-    // USUÁRIO NA SIDEBAR
-    // =====================================================
-
-    atualizarUsuarioNaTela();
-
-
-    // =====================================================
-    // PERMISSÕES
-    // =====================================================
-
-    configurarPermissoesTela();
-
-
-    protegerAcoesVendedor();
-
-
-    // =====================================================
-    // CAMPOS DE PARCELA
-    // =====================================================
-
-    if (!ehVendedor()) {
-
-        criarCamposParcelas();
-    }
-
+async function inicializarPaginaBoletos() {
 
     try {
 
         // =================================================
-        // 1º CARREGAR CLIENTES
+        // USUÁRIO
         // =================================================
-        //
-        // É importante carregar os clientes primeiro,
-        // porque boletoPertenceAoVendedor() pode usar
-        // a relação Cliente -> Vendedor.
+
+        atualizarUsuarioNaTela();
+
+
+        // =================================================
+        // TELA
+        // =================================================
+
+        prepararTelaInicial();
+
+
+        // =================================================
+        // PERMISSÕES
+        // =================================================
+
+        aplicarPermissoesPagina();
+
+
+        // =================================================
+        // CLIENTES
         // =================================================
 
         await carregarClientes();
 
 
-        console.log(
-            "Clientes permitidos:",
-            listaClientesGlobal
-        );
-
-
         // =================================================
-        // 2º CARREGAR BOLETOS
-        // =================================================
-        //
-        // A função carregarBoletos() da Parte 2 envia:
-        //
-        // x-usuario-id
-        //
-        // para o server.js.
+        // BOLETOS
         // =================================================
 
         await carregarBoletos();
 
 
         // =================================================
-        // REAPLICAR PERMISSÕES
-        // =================================================
-
-        configurarPermissoesTela();
-
-
-        protegerAcoesVendedor();
-
-
-        // =================================================
-        // LOG DE TESTE
+        // GARANTIR RESTRIÇÕES DO VENDEDOR
         // =================================================
 
         if (ehVendedor()) {
 
-            console.log(
-                "======================================"
-            );
-
-            console.log(
-                "MODO VENDEDOR"
-            );
-
-            console.log(
-                "Nome:",
-                usuarioLogado.nome
-            );
-
-            console.log(
-                "ID:",
-                usuarioLogado.id
-            );
-
-            console.log(
-                "Clientes do vendedor:",
-                listaClientesGlobal.map(
-                    cliente =>
-                        cliente.razao_social
-                )
-            );
-
-            console.log(
-                "Boletos visíveis:",
-                listaBoletosGlobal.map(
-                    boleto => ({
-                        id:
-                            boleto.id,
-
-                        cliente:
-                            boleto.razao_social,
-
-                        numero:
-                            boleto.num_boleto,
-
-                        vendedor:
-                            boleto.vendedor
-                    })
-                )
-            );
-
-            console.log(
-                "======================================"
-            );
+            aplicarRestricoesVendedor();
         }
 
 
     } catch (erro) {
 
         console.error(
-            "Erro ao iniciar página de boletos:",
+            "Erro ao inicializar página de boletos:",
             erro
         );
     }
@@ -3864,23 +5585,7 @@ async function iniciarPagina() {
 
 
 // =========================================================
-// INICIAR SOMENTE UMA VEZ
+// EXECUTAR
 // =========================================================
 
-if (
-    document.readyState ===
-    "loading"
-) {
-
-    document.addEventListener(
-        "DOMContentLoaded",
-        iniciarPagina,
-        {
-            once: true
-        }
-    );
-
-} else {
-
-    iniciarPagina();
-}
+inicializarPaginaBoletos();

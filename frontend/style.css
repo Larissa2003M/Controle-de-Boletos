@@ -2067,3 +2067,159 @@ td strong {
 #btnNovoBoleto:hover {
     background: #1d4ed8;
 }
+
+/* =========================================
+   CORES DOS STATUS DOS BOLETOS
+========================================= */
+
+.pending {
+    background-color: #fef3c7;
+    color: #92400e;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.paid {
+    background-color: #dcfce7;
+    color: #166534;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.overdue {
+    background-color: #fee2e2;
+    color: #991b1b;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.collection-status {
+    background-color: #dbeafe;
+    color: #1e40af;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+
+/* Status dos boletos */
+.pending {
+    background: #fef3c7;
+    color: #92400e;
+    padding: 5px 10px;
+    border-radius: 20px;
+    display: inline-block;
+}
+
+.paid {
+    background: #dcfce7;
+    color: #166534;
+    padding: 5px 10px;
+    border-radius: 20px;
+    display: inline-block;
+}
+
+.overdue {
+    background: #fee2e2;
+    color: #991b1b;
+    padding: 5px 10px;
+    border-radius: 20px;
+    display: inline-block;
+}
+
+.collection-status {
+    background: #dbeafe;
+    color: #1e40af;
+    padding: 5px 10px;
+    border-radius: 20px;
+    display: inline-block;
+}
+
+/* Botão de ação: editar boleto */
+.btn-editar-boleto {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 6px;
+    background-color: #2563eb;
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 15px;
+}
+
+.btn-editar-boleto:hover {
+    background-color: #1d4ed8;
+}
+
+
+/* =========================================
+   STATUS DOS USUÁRIOS
+   ========================================= */
+
+.status-usuario {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.usuario-ativo {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.usuario-inativo {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+
+/* Status dos clientes */
+.status-cliente {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.cliente-ativo {
+    background-color: #dcfce7;
+    color: #166534;
+}
+
+.cliente-inativo {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+/* Botão de edição */
+.btn-editar-cliente {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    background-color: #2563eb;
+    color: white;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.btn-editar-cliente:hover {
+    background-color: #1d4ed8;
+}

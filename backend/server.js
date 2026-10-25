@@ -2,6 +2,8 @@ const express = require("express");
 const mysql = require("mysql2");
 const cors = require("cors");
 const path = require("path");
+const bcrypt = require("bcrypt");
+const session = require("express-session");
 
 const app = express();
 
@@ -10,8 +12,52 @@ const app = express();
 // CONFIGURAÇÕES
 // =========================================================
 
-app.use(cors());
+app.use(
+    cors({
+        origin: true,
+        credentials: true
+    })
+);
+
 app.use(express.json());
+
+
+// =========================================================
+// CONFIGURAÇÃO DA SESSÃO
+// =========================================================
+
+app.use(
+    session({
+        secret: "controle-boleto-chave-sessao-2026",
+
+        resave: false,
+
+        saveUninitialized: false,
+
+        // Renova o tempo da sessão enquanto
+        // o usuário continua utilizando o sistema.
+        rolling: true,
+
+        cookie: {
+
+            // Impede acesso ao cookie pelo JavaScript
+            // do navegador.
+            httpOnly: true,
+
+            // Proteção contra envio do cookie
+            // em determinadas requisições externas.
+            sameSite: "lax",
+
+            // Em localhost permanece false.
+            // Em produção com HTTPS deverá ser true.
+            secure: false,
+
+            // 30 minutos
+            maxAge: 30 * 60 * 1000
+        }
+    })
+);
+
 
 app.use(
     express.static(
@@ -44,6 +90,7 @@ db.connect((erro) => {
         return;
     }
 
+
     console.log(
         "Conectado ao MySQL com sucesso!"
     );
@@ -54,21 +101,32 @@ db.connect((erro) => {
 // AUDITORIA
 // =========================================================
 
-function registrarAuditoria(usuario, acao) {
+function registrarAuditoria(
+    usuario,
+    acao
+) {
 
     if (!usuario || !acao) {
         return;
     }
 
+
     const sql = `
         INSERT INTO auditoria
-        (usuario, acao)
+        (
+            usuario,
+            acao
+        )
         VALUES (?, ?)
     `;
 
+
     db.query(
         sql,
-        [usuario, acao],
+        [
+            usuario,
+            acao
+        ],
         (erro) => {
 
             if (erro) {
@@ -78,6 +136,202 @@ function registrarAuditoria(usuario, acao) {
                     erro
                 );
             }
+        }
+    );
+}
+
+
+
+ // =========================================================
+ // MIDDLEWARE - USUÁRIO AUTENTICADO
+ // =========================================================
+
+function autenticarUsuario(req, res, next) {
+
+    console.log("\n--- DIAGNÓSTICO DA SESSÃO ---");
+
+    console.log(
+        "Cookie connect.sid recebido:",
+        Boolean(
+            req.headers.cookie &&
+            req.headers.cookie.includes("connect.sid=")
+        )
+    );
+
+    console.log(
+        "ID da sessão:",
+        req.sessionID || "Não identificado"
+    );
+
+    console.log(
+        "Sessão existe:",
+        Boolean(req.session)
+    );
+
+    console.log(
+        "Usuário na sessão:",
+        Boolean(req.session && req.session.usuario)
+    );
+
+    if (!req.session || !req.session.usuario) {
+        console.log("Resultado: sessão não autenticada.");
+        console.log("------------------------------");
+
+        return res.status(401).json({
+            erro: "Sessão expirada. Faça login novamente."
+        });
+    }
+
+    console.log("Resultado: usuário autenticado.");
+    console.log("------------------------------");
+
+    next();
+}
+
+
+
+// =========================================================
+// MIDDLEWARE - SOMENTE ADMINISTRADOR
+// =========================================================
+
+function somenteAdministrador(
+    req,
+    res,
+    next
+) {
+
+    // Primeiro verifica se existe sessão.
+    if (
+        !req.session ||
+        !req.session.usuario
+    ) {
+
+        return res
+            .status(401)
+            .json({
+                erro:
+                    "Sessão expirada. Faça login novamente."
+            });
+    }
+
+
+    const usuarioSessao =
+        req.session.usuario;
+
+
+    // Consulta novamente o banco para não confiar
+    // apenas nos dados armazenados na sessão.
+    const sql = `
+        SELECT
+            id,
+            nome,
+            usuario,
+            setor,
+            permissao,
+            status
+        FROM usuarios
+        WHERE id = ?
+        LIMIT 1
+    `;
+
+
+    db.query(
+        sql,
+        [usuarioSessao.id],
+        (erro, resultados) => {
+
+            if (erro) {
+
+                console.error(
+                    "Erro ao verificar permissão:",
+                    erro
+                );
+
+                return res
+                    .status(500)
+                    .json({
+                        erro:
+                            "Erro ao verificar permissão."
+                    });
+            }
+
+
+            if (
+                resultados.length === 0
+            ) {
+
+                req.session.destroy(
+                    () => {}
+                );
+
+
+                return res
+                    .status(401)
+                    .json({
+                        erro:
+                            "Usuário não encontrado."
+                    });
+            }
+
+
+            const usuario =
+                resultados[0];
+
+
+            // =============================================
+            // VERIFICA SE CONTINUA ATIVO
+            // =============================================
+
+            if (
+                !usuario.status ||
+                String(usuario.status)
+                    .trim()
+                    .toLowerCase() !==
+                    "ativo"
+            ) {
+
+                req.session.destroy(
+                    () => {}
+                );
+
+
+                return res
+                    .status(403)
+                    .json({
+                        erro:
+                            "Usuário inativo."
+                    });
+            }
+
+
+            // =============================================
+            // VERIFICA O PERFIL
+            // =============================================
+
+            if (
+                !usuario.permissao ||
+                String(usuario.permissao)
+                    .trim()
+                    .toLowerCase() !==
+                    "administrador"
+            ) {
+
+                return res
+                    .status(403)
+                    .json({
+                        erro:
+                            "Acesso negado. Somente o Administrador possui permissão."
+                    });
+            }
+
+
+            // Dados confiáveis obtidos novamente
+            // diretamente do banco.
+            req.usuarioAutenticado =
+                usuario;
+
+
+            next();
         }
     );
 }
@@ -97,29 +351,37 @@ app.post(
         } = req.body;
 
 
-        if (!usuario || !senha) {
+        if (
+            !usuario ||
+            !senha
+        ) {
 
             return res
                 .status(400)
                 .json({
-                    erro: "Informe usuário e senha."
+                    erro:
+                        "Informe usuário e senha."
                 });
         }
 
 
+        // A senha NÃO é pesquisada diretamente
+        // no SQL.
         const sql = `
             SELECT *
             FROM usuarios
             WHERE usuario = ?
-            AND senha = ?
             LIMIT 1
         `;
 
 
         db.query(
             sql,
-            [usuario, senha],
-            (erro, resultados) => {
+            [usuario],
+            async (
+                erro,
+                resultados
+            ) => {
 
                 if (erro) {
 
@@ -128,20 +390,25 @@ app.post(
                         erro
                     );
 
+
                     return res
                         .status(500)
                         .json({
-                            erro: "Erro interno do servidor."
+                            erro:
+                                "Erro interno do servidor."
                         });
                 }
 
 
-                if (resultados.length === 0) {
+                if (
+                    resultados.length === 0
+                ) {
 
                     return res
                         .status(401)
                         .json({
-                            erro: "Usuário ou senha inválidos."
+                            erro:
+                                "Usuário ou senha inválidos."
                         });
                 }
 
@@ -150,47 +417,164 @@ app.post(
                     resultados[0];
 
 
+                // =========================================
+                // VERIFICA SE O USUÁRIO ESTÁ ATIVO
+                // =========================================
+
                 if (
-                    usuarioEncontrado.status &&
+                    !usuarioEncontrado.status ||
                     String(
                         usuarioEncontrado.status
-                    ).toLowerCase() !== "ativo"
+                    )
+                        .trim()
+                        .toLowerCase() !==
+                        "ativo"
                 ) {
 
                     return res
                         .status(403)
                         .json({
-                            erro: "Usuário inativo."
+                            erro:
+                                "Usuário inativo."
                         });
                 }
 
 
-                registrarAuditoria(
-                    usuarioEncontrado.nome,
-                    "Realizou login no sistema"
+                // =========================================
+                // VERIFICA A SENHA COM BCRYPT
+                // =========================================
+
+                let senhaCorreta = false;
+
+
+                try {
+
+                    senhaCorreta =
+                        await bcrypt.compare(
+                            senha,
+                            usuarioEncontrado.senha
+                        );
+
+                } catch (erroSenha) {
+
+                    console.error(
+                        "Erro ao verificar senha:",
+                        erroSenha
+                    );
+
+
+                    return res
+                        .status(500)
+                        .json({
+                            erro:
+                                "Erro ao verificar senha."
+                        });
+                }
+
+
+                if (!senhaCorreta) {
+
+                    return res
+                        .status(401)
+                        .json({
+                            erro:
+                                "Usuário ou senha inválidos."
+                        });
+                }
+
+
+                // =========================================
+                // CRIA A SESSÃO REAL NO SERVIDOR
+                // =========================================
+
+                req.session.regenerate(
+                    (erroSessao) => {
+
+                        if (erroSessao) {
+
+                            console.error(
+                                "Erro ao criar sessão:",
+                                erroSessao
+                            );
+
+
+                            return res
+                                .status(500)
+                                .json({
+                                    erro:
+                                        "Erro ao iniciar sessão."
+                                });
+                        }
+
+
+                        req.session.usuario = {
+
+                            id:
+                                usuarioEncontrado.id,
+
+                            nome:
+                                usuarioEncontrado.nome,
+
+                            usuario:
+                                usuarioEncontrado.usuario,
+
+                            setor:
+                                usuarioEncontrado.setor,
+
+                            permissao:
+                                usuarioEncontrado.permissao,
+
+                            status:
+                                usuarioEncontrado.status
+                        };
+
+
+                        // =================================
+                        // AUDITORIA
+                        // =================================
+
+                        registrarAuditoria(
+                            usuarioEncontrado.nome,
+                            "Realizou login no sistema"
+                        );
+
+
+
+                        // =================================
+                        // RESPOSTA
+                        // =================================
+
+                        req.session.save((erroSalvar) => {
+                            if (erroSalvar) {
+                                console.error(
+                                    "Erro ao salvar a sessão:",
+                                    erroSalvar
+                                );
+
+                                return res.status(500).json({
+                                    erro: "Não foi possível salvar a sessão."
+                                });
+                            }
+
+                            console.log(
+                                "Sessão salva com sucesso. ID:",
+                                req.sessionID
+                            );
+
+                            return res.json({
+                                mensagem: "Login realizado com sucesso.",
+                                usuario: {
+                                    id: usuarioEncontrado.id,
+                                    nome: usuarioEncontrado.nome,
+                                    usuario: usuarioEncontrado.usuario,
+                                    setor: usuarioEncontrado.setor,
+                                    permissao: usuarioEncontrado.permissao,
+                                    status: usuarioEncontrado.status
+                                }
+                            });
+                        });
+                    }
                 );
-
-
-                res.json({
-
-                    id:
-                        usuarioEncontrado.id,
-
-                    nome:
-                        usuarioEncontrado.nome,
-
-                    usuario:
-                        usuarioEncontrado.usuario,
-
-                    setor:
-                        usuarioEncontrado.setor,
-
-                    permissao:
-                        usuarioEncontrado.permissao,
-
-                    status:
-                        usuarioEncontrado.status
-                });
             }
         );
     }
@@ -198,110 +582,77 @@ app.post(
 
 
 // =========================================================
-// CONTROLE DE ACESSO - ADMINISTRADOR
+// VERIFICAR SESSÃO
 // =========================================================
 
-function somenteAdministrador(req, res, next) {
+app.get(
+    "/api/sessao",
+    autenticarUsuario,
+    (req, res) => {
 
-    const usuarioId =
-        req.headers["x-usuario-id"];
+        res.json({
 
+            autenticado: true,
 
-    if (!usuarioId) {
-
-        return res
-            .status(401)
-            .json({
-                erro: "Usuário não autenticado."
-            });
+            usuario:
+                req.session.usuario
+        });
     }
+);
 
 
-    const sql = `
-        SELECT
-            id,
-            nome,
-            permissao,
-            status
-        FROM usuarios
-        WHERE id = ?
-        LIMIT 1
-    `;
+// =========================================================
+// LOGOUT
+// =========================================================
+
+app.post(
+    "/api/logout",
+    autenticarUsuario,
+    (req, res) => {
+
+        const nomeUsuario =
+            req.session.usuario.nome;
 
 
-    db.query(
-        sql,
-        [usuarioId],
-        (erro, resultados) => {
+        registrarAuditoria(
+            nomeUsuario,
+            "Realizou logout do sistema"
+        );
 
-            if (erro) {
 
-                console.error(
-                    "Erro ao verificar permissão:",
-                    erro
+        req.session.destroy(
+            (erro) => {
+
+                if (erro) {
+
+                    console.error(
+                        "Erro ao encerrar sessão:",
+                        erro
+                    );
+
+
+                    return res
+                        .status(500)
+                        .json({
+                            erro:
+                                "Erro ao encerrar sessão."
+                        });
+                }
+
+
+                res.clearCookie(
+                    "connect.sid"
                 );
 
-                return res
-                    .status(500)
-                    .json({
-                        erro: "Erro ao verificar permissão."
-                    });
+
+                res.json({
+                    mensagem:
+                        "Logout realizado com sucesso."
+                });
             }
-
-
-            if (resultados.length === 0) {
-
-                return res
-                    .status(401)
-                    .json({
-                        erro: "Usuário não encontrado."
-                    });
-            }
-
-
-            const usuario =
-                resultados[0];
-
-
-            // Verifica se está ativo
-            if (
-                !usuario.status ||
-                String(usuario.status)
-                    .toLowerCase() !== "ativo"
-            ) {
-
-                return res
-                    .status(403)
-                    .json({
-                        erro: "Usuário inativo."
-                    });
-            }
-
-
-            // Somente Administrador
-            if (
-                !usuario.permissao ||
-                String(usuario.permissao)
-                    .toLowerCase() !==
-                    "administrador"
-            ) {
-
-                return res
-                    .status(403)
-                    .json({
-                        erro:
-                            "Acesso negado. Somente o Administrador pode gerenciar usuários."
-                    });
-            }
-
-
-            req.usuarioAutenticado =
-                usuario;
-
-            next();
-        }
-    );
-}
+        );
+    }
+);
 
 
 // =========================================================
@@ -344,6 +695,7 @@ app.get(
                         erro
                     );
 
+
                     return res
                         .status(500)
                         .json({
@@ -353,13 +705,13 @@ app.get(
                 }
 
 
-                res.json(resultados);
+                res.json(
+                    resultados
+                );
             }
         );
     }
 );
-
-
 // =========================================================
 // CADASTRAR USUÁRIO
 // SOMENTE ADMINISTRADOR
@@ -368,7 +720,7 @@ app.get(
 app.post(
     "/api/usuarios",
     somenteAdministrador,
-    (req, res) => {
+    async (req, res) => {
 
         const {
             nome,
@@ -386,7 +738,6 @@ app.post(
         } = req.body;
 
 
-        // Verifica campos obrigatórios
         if (
             !nome ||
             !cpf ||
@@ -411,7 +762,42 @@ app.post(
         }
 
 
-        // Função responsável pela inserção
+        // =================================================
+        // GERA O HASH DA SENHA
+        // =================================================
+
+        let senhaHash;
+
+
+        try {
+
+            senhaHash =
+                await bcrypt.hash(
+                    senha,
+                    10
+                );
+
+        } catch (erroHash) {
+
+            console.error(
+                "Erro ao proteger senha:",
+                erroHash
+            );
+
+
+            return res
+                .status(500)
+                .json({
+                    erro:
+                        "Erro ao proteger a senha."
+                });
+        }
+
+
+        // =================================================
+        // FUNÇÃO PARA INSERIR USUÁRIO
+        // =================================================
+
         function inserirUsuario() {
 
             const sql = `
@@ -431,7 +817,10 @@ app.post(
                     cpf
                 )
                 VALUES
-                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (
+                    ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?
+                )
             `;
 
 
@@ -443,7 +832,10 @@ app.post(
                 endereco,
                 numero,
                 bairro,
-                senha,
+
+                // Senha protegida
+                senhaHash,
+
                 setor,
                 permissao,
                 status || "Ativo",
@@ -488,6 +880,11 @@ app.post(
                     }
 
 
+                    // =====================================
+                    // AUDITORIA
+                    // =====================================
+                    // O usuário vem da sessão autenticada.
+
                     registrarAuditoria(
                         req.usuarioAutenticado.nome,
                         `Cadastrou o usuário ${nome}`
@@ -515,6 +912,7 @@ app.post(
 
         if (
             String(permissao)
+                .trim()
                 .toLowerCase() ===
             "administrador"
         ) {
@@ -530,7 +928,10 @@ app.post(
 
             db.query(
                 sqlAdmin,
-                (erroAdmin, administradores) => {
+                (
+                    erroAdmin,
+                    administradores
+                ) => {
 
                     if (erroAdmin) {
 
@@ -538,6 +939,7 @@ app.post(
                             "Erro ao verificar Administrador:",
                             erroAdmin
                         );
+
 
                         return res
                             .status(500)
@@ -565,6 +967,7 @@ app.post(
                 }
             );
 
+
             return;
         }
 
@@ -582,7 +985,7 @@ app.post(
 app.put(
     "/api/usuarios/:id",
     somenteAdministrador,
-    (req, res) => {
+    async (req, res) => {
 
         const id =
             Number(req.params.id);
@@ -609,12 +1012,13 @@ app.put(
             return res
                 .status(400)
                 .json({
-                    erro: "Usuário inválido."
+                    erro:
+                        "Usuário inválido."
                 });
         }
 
 
-        // Na edição a senha pode ficar vazia
+        // A senha não é obrigatória na edição.
         if (
             !nome ||
             !cpf ||
@@ -639,20 +1043,51 @@ app.put(
 
 
         // =================================================
-        // FUNÇÃO PARA ATUALIZAR
+        // FUNÇÃO PARA ATUALIZAR USUÁRIO
         // =================================================
 
-        function atualizarUsuario() {
+        async function atualizarUsuario() {
 
             let sql;
             let valores;
 
 
-            // Se informou uma nova senha
+            // =============================================
+            // SE FOI INFORMADA UMA NOVA SENHA
+            // =============================================
+
             if (
                 senha &&
-                senha.trim() !== ""
+                String(senha).trim() !== ""
             ) {
+
+                let senhaHash;
+
+
+                try {
+
+                    senhaHash =
+                        await bcrypt.hash(
+                            senha,
+                            10
+                        );
+
+                } catch (erroHash) {
+
+                    console.error(
+                        "Erro ao proteger senha:",
+                        erroHash
+                    );
+
+
+                    return res
+                        .status(500)
+                        .json({
+                            erro:
+                                "Erro ao proteger a senha."
+                        });
+                }
+
 
                 sql = `
                     UPDATE usuarios
@@ -681,7 +1116,10 @@ app.put(
                     endereco,
                     numero,
                     bairro,
-                    senha,
+
+                    // Nova senha protegida
+                    senhaHash,
+
                     setor,
                     permissao,
                     status,
@@ -692,7 +1130,11 @@ app.put(
 
             } else {
 
-                // Não altera a senha
+                // =========================================
+                // SEM NOVA SENHA
+                // =========================================
+                // Mantém o hash que já está no banco.
+
                 sql = `
                     UPDATE usuarios
                     SET
@@ -778,6 +1220,10 @@ app.put(
                     }
 
 
+                    // =====================================
+                    // AUDITORIA
+                    // =====================================
+
                     registrarAuditoria(
                         req.usuarioAutenticado.nome,
                         `Atualizou o usuário ${nome}`
@@ -799,6 +1245,7 @@ app.put(
 
         if (
             String(permissao)
+                .trim()
                 .toLowerCase() ===
             "administrador"
         ) {
@@ -828,6 +1275,7 @@ app.put(
                             erroAdmin
                         );
 
+
                         return res
                             .status(500)
                             .json({
@@ -854,6 +1302,7 @@ app.put(
                 }
             );
 
+
             return;
         }
 
@@ -865,11 +1314,80 @@ app.put(
 
 // =========================================================
 // LISTAR CLIENTES
+// USUÁRIO PRECISA ESTAR AUTENTICADO
 // =========================================================
 
 app.get(
     "/api/clientes",
+    autenticarUsuario,
     (req, res) => {
+
+        const usuarioSessao =
+            req.session.usuario;
+
+
+        const permissao =
+            String(
+                usuarioSessao.permissao || ""
+            )
+                .trim()
+                .toLowerCase();
+
+
+        // =============================================
+        // VENDEDOR
+        // =============================================
+        // Só consulta clientes atribuídos a ele.
+
+        if (
+            permissao === "vendedor"
+        ) {
+
+            const sql = `
+                SELECT *
+                FROM clientes
+                WHERE TRIM(LOWER(vendedor)) =
+                      TRIM(LOWER(?))
+                ORDER BY razao_social
+            `;
+
+
+            db.query(
+                sql,
+                [usuarioSessao.nome],
+                (erro, resultados) => {
+
+                    if (erro) {
+
+                        console.error(
+                            "Erro ao buscar clientes:",
+                            erro
+                        );
+
+
+                        return res
+                            .status(500)
+                            .json({
+                                erro:
+                                    "Erro ao buscar clientes."
+                            });
+                    }
+
+
+                    return res.json(
+                        resultados
+                    );
+                }
+            );
+
+
+            return;
+        }
+
+
+        // =============================================
+        // ADMINISTRADOR / OPERADOR
+        // =============================================
 
         const sql = `
             SELECT *
@@ -889,6 +1407,7 @@ app.get(
                         erro
                     );
 
+
                     return res
                         .status(500)
                         .json({
@@ -898,7 +1417,9 @@ app.get(
                 }
 
 
-                res.json(resultados);
+                res.json(
+                    resultados
+                );
             }
         );
     }
@@ -907,10 +1428,12 @@ app.get(
 
 // =========================================================
 // CADASTRAR CLIENTE
+// USUÁRIO PRECISA ESTAR AUTENTICADO
 // =========================================================
 
 app.post(
     "/api/clientes",
+    autenticarUsuario,
     (req, res) => {
 
         const {
@@ -926,8 +1449,7 @@ app.post(
             cep,
             bairro,
             vendedor,
-            status,
-            usuario_logado
+            status
         } = req.body;
 
 
@@ -964,7 +1486,6 @@ app.post(
         }
 
 
-        // Verifica se o CNPJ já existe
         const sqlVerificar = `
             SELECT id
             FROM clientes
@@ -987,6 +1508,7 @@ app.post(
                         "Erro ao verificar cliente:",
                         erroVerificacao
                     );
+
 
                     return res
                         .status(500)
@@ -1028,7 +1550,10 @@ app.post(
                         status
                     )
                     VALUES
-                    (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    (
+                        ?, ?, ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?, ?
+                    )
                 `;
 
 
@@ -1087,6 +1612,7 @@ app.post(
                                 erro
                             );
 
+
                             return res
                                 .status(500)
                                 .json({
@@ -1096,12 +1622,9 @@ app.post(
                         }
 
 
+                        // Usuário vem da sessão.
                         registrarAuditoria(
-
-                            usuario_logado ||
-                            vendedor ||
-                            "Sistema",
-
+                            req.session.usuario.nome,
                             `Cadastrou o cliente ${razao_social}`
                         );
 
@@ -1126,10 +1649,12 @@ app.post(
 
 // =========================================================
 // ATUALIZAR CLIENTE
+// USUÁRIO PRECISA ESTAR AUTENTICADO
 // =========================================================
 
 app.put(
     "/api/clientes/:id",
+    autenticarUsuario,
     (req, res) => {
 
         const id =
@@ -1149,8 +1674,7 @@ app.put(
             cep,
             bairro,
             vendedor,
-            status,
-            usuario_logado
+            status
         } = req.body;
 
 
@@ -1187,8 +1711,6 @@ app.put(
         }
 
 
-        // Verifica se outro cliente
-        // já utiliza o mesmo CNPJ
         const sqlVerificar = `
             SELECT id
             FROM clientes
@@ -1215,6 +1737,7 @@ app.put(
                         "Erro ao verificar cliente:",
                         erroVerificacao
                     );
+
 
                     return res
                         .status(500)
@@ -1315,6 +1838,7 @@ app.put(
                                 erro
                             );
 
+
                             return res
                                 .status(500)
                                 .json({
@@ -1338,11 +1862,7 @@ app.put(
 
 
                         registrarAuditoria(
-
-                            usuario_logado ||
-                            vendedor ||
-                            "Sistema",
-
+                            req.session.usuario.nome,
                             `Atualizou o cliente ${razao_social}`
                         );
 
@@ -1357,241 +1877,162 @@ app.put(
         );
     }
 );
-
 // =========================================================
 // LISTAR BOLETOS
-// CONTROLE DE ACESSO POR USUÁRIO
+// USUÁRIO PRECISA ESTAR AUTENTICADO
 // =========================================================
 
 app.get(
     "/api/boletos",
+    autenticarUsuario,
     (req, res) => {
 
-        const usuarioId =
-            req.headers["x-usuario-id"];
+        const usuarioSessao =
+            req.session.usuario;
 
 
-        if (!usuarioId) {
+        const permissao =
+            String(
+                usuarioSessao.permissao || ""
+            )
+                .trim()
+                .toLowerCase();
 
-            return res
-                .status(401)
-                .json({
-                    erro: "Usuário não autenticado."
-                });
+
+        // =============================================
+        // VENDEDOR
+        // =============================================
+        // Só consulta boletos dos clientes
+        // atribuídos ao próprio vendedor.
+
+        if (permissao === "vendedor") {
+
+            const sql = `
+                SELECT DISTINCT
+                    b.*
+                FROM boletos b
+
+                INNER JOIN clientes c
+                    ON TRIM(LOWER(c.razao_social)) =
+                       TRIM(LOWER(b.razao_social))
+
+                WHERE
+                    TRIM(LOWER(c.vendedor)) =
+                    TRIM(LOWER(?))
+
+                ORDER BY
+                    b.vencimento ASC,
+                    b.id DESC
+            `;
+
+
+            db.query(
+                sql,
+                [usuarioSessao.nome],
+                (erro, resultados) => {
+
+                    if (erro) {
+
+                        console.error(
+                            "Erro ao buscar boletos do vendedor:",
+                            erro
+                        );
+
+
+                        return res
+                            .status(500)
+                            .json({
+                                erro:
+                                    "Erro ao buscar boletos do vendedor."
+                            });
+                    }
+
+
+                    return res.json(
+                        resultados
+                    );
+                }
+            );
+
+
+            return;
         }
 
 
-        // Primeiro descobre quem está logado
-        const sqlUsuario = `
-            SELECT
-                id,
-                nome,
-                permissao,
-                status
-            FROM usuarios
-            WHERE id = ?
-            LIMIT 1
-        `;
+        // =============================================
+        // ADMINISTRADOR / OPERADOR
+        // =============================================
+
+        if (
+            permissao === "administrador" ||
+            permissao === "operador"
+        ) {
+
+            const sql = `
+                SELECT *
+                FROM boletos
+                ORDER BY
+                    vencimento ASC,
+                    id DESC
+            `;
 
 
-        db.query(
-            sqlUsuario,
-            [usuarioId],
-            (erroUsuario, usuarios) => {
+            db.query(
+                sql,
+                (erro, resultados) => {
 
-                if (erroUsuario) {
+                    if (erro) {
 
-                    console.error(
-                        "Erro ao verificar usuário:",
-                        erroUsuario
+                        console.error(
+                            "Erro ao buscar boletos:",
+                            erro
+                        );
+
+
+                        return res
+                            .status(500)
+                            .json({
+                                erro:
+                                    "Erro ao buscar boletos."
+                            });
+                    }
+
+
+                    return res.json(
+                        resultados
                     );
-
-                    return res
-                        .status(500)
-                        .json({
-                            erro: "Erro ao verificar usuário."
-                        });
                 }
+            );
 
 
-                if (usuarios.length === 0) {
-
-                    return res
-                        .status(401)
-                        .json({
-                            erro: "Usuário não encontrado."
-                        });
-                }
+            return;
+        }
 
 
-                const usuario =
-                    usuarios[0];
-
-
-                // Usuário precisa estar ativo
-                if (
-                    !usuario.status ||
-                    String(usuario.status)
-                        .trim()
-                        .toLowerCase() !== "ativo"
-                ) {
-
-                    return res
-                        .status(403)
-                        .json({
-                            erro: "Usuário inativo."
-                        });
-                }
-
-
-                const permissao =
-                    String(
-                        usuario.permissao || ""
-                    )
-                        .trim()
-                        .toLowerCase();
-
-
-                // ==========================================
-                // VENDEDOR
-                // ==========================================
-                // Só recebe boletos dos clientes
-                // atribuídos ao seu nome.
-                // ==========================================
-
-                if (permissao === "vendedor") {
-
-                    const sql = `
-                        SELECT DISTINCT
-                            b.*
-                        FROM boletos b
-
-                        INNER JOIN clientes c
-                            ON TRIM(LOWER(c.razao_social)) =
-                               TRIM(LOWER(b.razao_social))
-
-                        WHERE
-                            TRIM(LOWER(c.vendedor)) =
-                            TRIM(LOWER(?))
-
-                        ORDER BY
-                            b.vencimento ASC,
-                            b.id DESC
-                    `;
-
-
-                    db.query(
-                        sql,
-                        [usuario.nome],
-                        (erro, resultados) => {
-
-                            if (erro) {
-
-                                console.error(
-                                    "Erro ao buscar boletos do vendedor:",
-                                    erro
-                                );
-
-                                return res
-                                    .status(500)
-                                    .json({
-                                        erro:
-                                            "Erro ao buscar boletos do vendedor."
-                                    });
-                            }
-
-
-                            console.log(
-                                `Vendedor ${usuario.nome} recebeu ${resultados.length} boleto(s).`
-                            );
-
-
-                            return res.json(
-                                resultados
-                            );
-                        }
-                    );
-
-
-                    return;
-                }
-
-
-                // ==========================================
-                // ADMINISTRADOR / OPERADOR
-                // ==========================================
-                // Podem consultar todos os boletos.
-                // ==========================================
-
-                if (
-                    permissao === "administrador" ||
-                    permissao === "operador"
-                ) {
-
-                    const sql = `
-                        SELECT *
-                        FROM boletos
-                        ORDER BY
-                            vencimento ASC,
-                            id DESC
-                    `;
-
-
-                    db.query(
-                        sql,
-                        (erro, resultados) => {
-
-                            if (erro) {
-
-                                console.error(
-                                    "Erro ao buscar boletos:",
-                                    erro
-                                );
-
-                                return res
-                                    .status(500)
-                                    .json({
-                                        erro:
-                                            "Erro ao buscar boletos."
-                                    });
-                            }
-
-
-                            return res.json(
-                                resultados
-                            );
-                        }
-                    );
-
-
-                    return;
-                }
-
-
-                // Qualquer outro perfil
-                return res
-                    .status(403)
-                    .json({
-                        erro:
-                            "Usuário sem permissão para consultar boletos."
-                    });
-            }
-        );
+        return res
+            .status(403)
+            .json({
+                erro:
+                    "Usuário sem permissão para consultar boletos."
+            });
     }
 );
 
 
 // =========================================================
-// CADASTRAR UM BOLETO
+// CADASTRAR BOLETO
+// USUÁRIO PRECISA ESTAR AUTENTICADO
 // =========================================================
 
 app.post(
     "/api/boletos",
+    autenticarUsuario,
     (req, res) => {
 
         const {
             razao_social,
             num_boleto,
+            linha_digitavel,
             valor,
             data_emissao,
             vencimento,
@@ -1604,12 +2045,10 @@ app.post(
             pagador_numero,
             pagador_cep,
 
-            instrucoes,
-            usuario_logado
+            instrucoes
         } = req.body;
 
 
-        // Verifica campos obrigatórios
         if (
             !razao_social ||
             !num_boleto ||
@@ -1628,7 +2067,6 @@ app.post(
         }
 
 
-        // Valor deve ser maior que zero
         if (Number(valor) <= 0) {
 
             return res
@@ -1640,8 +2078,34 @@ app.post(
         }
 
 
-        // Verifica se já existe boleto
-        // com o mesmo número
+        const usuarioSessao =
+            req.session.usuario;
+
+
+        const permissao =
+            String(
+                usuarioSessao.permissao || ""
+            )
+                .trim()
+                .toLowerCase();
+
+
+        // =============================================
+        // VENDEDOR
+        // =============================================
+        // Caso um vendedor cadastre um boleto,
+        // ele não pode indicar outro vendedor.
+
+        const vendedorBoleto =
+            permissao === "vendedor"
+                ? usuarioSessao.nome
+                : vendedor || null;
+
+
+        // =============================================
+        // VERIFICA SE O BOLETO JÁ EXISTE
+        // =============================================
+
         const sqlVerificar = `
             SELECT id
             FROM boletos
@@ -1665,6 +2129,7 @@ app.post(
                         erroVerificacao
                     );
 
+
                     return res
                         .status(500)
                         .json({
@@ -1674,7 +2139,9 @@ app.post(
                 }
 
 
-                if (encontrados.length > 0) {
+                if (
+                    encontrados.length > 0
+                ) {
 
                     return res
                         .status(409)
@@ -1690,6 +2157,7 @@ app.post(
                     (
                         razao_social,
                         num_boleto,
+                        linha_digitavel,
                         valor,
                         data_emissao,
                         vencimento,
@@ -1706,7 +2174,7 @@ app.post(
                     )
                     VALUES
                     (
-                        ?, ?, ?, ?, ?, ?, ?, ?,
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?,
                         ?, ?, ?, ?, ?
                     )
                 `;
@@ -1718,27 +2186,37 @@ app.post(
 
                     num_boleto,
 
+                    linha_digitavel ||
+                    null,
+
                     valor,
 
                     data_emissao,
 
                     vencimento,
 
-                    vendedor || null,
+                    vendedorBoleto,
 
-                    status || "Pendente",
+                    status ||
+                    "Pendente",
 
-                    motivo_baixa || null,
+                    motivo_baixa ||
+                    null,
 
-                    pagador_cpf_cnpj || null,
+                    pagador_cpf_cnpj ||
+                    null,
 
-                    pagador_endereco || null,
+                    pagador_endereco ||
+                    null,
 
-                    pagador_numero || null,
+                    pagador_numero ||
+                    null,
 
-                    pagador_cep || null,
+                    pagador_cep ||
+                    null,
 
-                    instrucoes || null
+                    instrucoes ||
+                    null
                 ];
 
 
@@ -1757,6 +2235,7 @@ app.post(
                                 erro
                             );
 
+
                             return res
                                 .status(500)
                                 .json({
@@ -1766,12 +2245,13 @@ app.post(
                         }
 
 
+                        // =================================
+                        // AUDITORIA
+                        // =================================
+                        // Usuário obtido da sessão.
+
                         registrarAuditoria(
-
-                            usuario_logado ||
-                            vendedor ||
-                            "Sistema",
-
+                            usuarioSessao.nome,
                             `Cadastrou o boleto ${num_boleto} do cliente ${razao_social}`
                         );
 
@@ -1796,19 +2276,19 @@ app.post(
 
 // =========================================================
 // CADASTRAR BOLETOS PARCELADOS
+// USUÁRIO PRECISA ESTAR AUTENTICADO
 // =========================================================
 
 app.post(
     "/api/boletos/lote",
+    autenticarUsuario,
     (req, res) => {
 
         const {
-            boletos,
-            usuario_logado
+            boletos
         } = req.body;
 
 
-        // Verifica se recebeu boletos
         if (
             !Array.isArray(boletos) ||
             boletos.length === 0
@@ -1823,8 +2303,10 @@ app.post(
         }
 
 
-        // Verifica os dados obrigatórios
-        // de cada boleto
+        // =============================================
+        // VALIDA OS BOLETOS
+        // =============================================
+
         for (const boleto of boletos) {
 
             if (
@@ -1847,8 +2329,22 @@ app.post(
         }
 
 
-        // Pega todos os números
-        // dos boletos
+        const usuarioSessao =
+            req.session.usuario;
+
+
+        const permissao =
+            String(
+                usuarioSessao.permissao || ""
+            )
+                .trim()
+                .toLowerCase();
+
+
+        // =============================================
+        // VERIFICA NÚMEROS REPETIDOS NO LOTE
+        // =============================================
+
         const numeros =
             boletos.map(
                 boleto =>
@@ -1858,8 +2354,6 @@ app.post(
             );
 
 
-        // Verifica números repetidos
-        // dentro do próprio lote
         const numerosUnicos =
             new Set(numeros);
 
@@ -1878,8 +2372,6 @@ app.post(
         }
 
 
-        // Monta os placeholders
-        // para consulta SQL
         const placeholders =
             numeros
                 .map(() => "?")
@@ -1909,6 +2401,7 @@ app.post(
                         erroVerificacao
                     );
 
+
                     return res
                         .status(500)
                         .json({
@@ -1918,9 +2411,9 @@ app.post(
                 }
 
 
-                // Já existem boletos com
-                // algum dos números
-                if (encontrados.length > 0) {
+                if (
+                    encontrados.length > 0
+                ) {
 
                     const repetidos =
                         encontrados
@@ -1940,28 +2433,9 @@ app.post(
                 }
 
 
-                const sql = `
-                    INSERT INTO boletos
-                    (
-                        razao_social,
-                        num_boleto,
-                        valor,
-                        data_emissao,
-                        vencimento,
-                        vendedor,
-                        status,
-                        motivo_baixa,
-
-                        pagador_cpf_cnpj,
-                        pagador_endereco,
-                        pagador_numero,
-                        pagador_cep,
-
-                        instrucoes
-                    )
-                    VALUES ?
-                `;
-
+                // =============================================
+                // PREPARA OS VALORES
+                // =============================================
 
                 const valores =
                     boletos.map(
@@ -1971,14 +2445,20 @@ app.post(
 
                             boleto.num_boleto,
 
+                            boleto.linha_digitavel ||
+                            null,
+
                             boleto.valor,
 
                             boleto.data_emissao,
 
                             boleto.vencimento,
 
-                            boleto.vendedor ||
-                            null,
+                            // Vendedor não consegue
+                            // informar outro vendedor.
+                            permissao === "vendedor"
+                                ? usuarioSessao.nome
+                                : boleto.vendedor || null,
 
                             boleto.status ||
                             "Pendente",
@@ -2004,6 +2484,30 @@ app.post(
                     );
 
 
+                const sql = `
+                    INSERT INTO boletos
+                    (
+                        razao_social,
+                        num_boleto,
+                        linha_digitavel,
+                        valor,
+                        data_emissao,
+                        vencimento,
+                        vendedor,
+                        status,
+                        motivo_baixa,
+
+                        pagador_cpf_cnpj,
+                        pagador_endereco,
+                        pagador_numero,
+                        pagador_cep,
+
+                        instrucoes
+                    )
+                    VALUES ?
+                `;
+
+
                 db.query(
                     sql,
                     [valores],
@@ -2019,6 +2523,7 @@ app.post(
                                 erro
                             );
 
+
                             return res
                                 .status(500)
                                 .json({
@@ -2029,11 +2534,7 @@ app.post(
 
 
                         registrarAuditoria(
-
-                            usuario_logado ||
-                            boletos[0].vendedor ||
-                            "Sistema",
-
+                            usuarioSessao.nome,
                             `Cadastrou ${boletos.length} boletos para o cliente ${boletos[0].razao_social}`
                         );
 
@@ -2058,10 +2559,12 @@ app.post(
 
 // =========================================================
 // ATUALIZAR BOLETO
+// USUÁRIO PRECISA ESTAR AUTENTICADO
 // =========================================================
 
 app.put(
     "/api/boletos/:id",
+    autenticarUsuario,
     (req, res) => {
 
         const id =
@@ -2071,6 +2574,7 @@ app.put(
         const {
             razao_social,
             num_boleto,
+            linha_digitavel,
             valor,
             data_emissao,
             vencimento,
@@ -2083,12 +2587,10 @@ app.put(
             pagador_numero,
             pagador_cep,
 
-            instrucoes,
-            usuario_logado
+            instrucoes
         } = req.body;
 
 
-        // Verifica dados obrigatórios
         if (
             !razao_social ||
             !num_boleto ||
@@ -2107,8 +2609,6 @@ app.put(
         }
 
 
-        // Valor precisa ser maior
-        // que zero
         if (Number(valor) <= 0) {
 
             return res
@@ -2120,8 +2620,26 @@ app.put(
         }
 
 
-        // Verifica se outro boleto
-        // já possui o mesmo número
+        const usuarioSessao =
+            req.session.usuario;
+
+
+        const permissao =
+            String(
+                usuarioSessao.permissao || ""
+            )
+                .trim()
+                .toLowerCase();
+
+
+        // Se for vendedor, não aceita o nome
+        // de outro vendedor enviado pelo navegador.
+        const vendedorBoleto =
+            permissao === "vendedor"
+                ? usuarioSessao.nome
+                : vendedor || null;
+
+
         const sqlVerificar = `
             SELECT id
             FROM boletos
@@ -2149,6 +2667,7 @@ app.put(
                         erroVerificacao
                     );
 
+
                     return res
                         .status(500)
                         .json({
@@ -2158,7 +2677,9 @@ app.put(
                 }
 
 
-                if (encontrados.length > 0) {
+                if (
+                    encontrados.length > 0
+                ) {
 
                     return res
                         .status(409)
@@ -2174,6 +2695,7 @@ app.put(
                     SET
                         razao_social = ?,
                         num_boleto = ?,
+                        linha_digitavel = ?,
                         valor = ?,
                         data_emissao = ?,
                         vencimento = ?,
@@ -2198,27 +2720,37 @@ app.put(
 
                     num_boleto,
 
+                    linha_digitavel ||
+                    null,
+
                     valor,
 
                     data_emissao,
 
                     vencimento,
 
-                    vendedor || null,
+                    vendedorBoleto,
 
-                    status || "Pendente",
+                    status ||
+                    "Pendente",
 
-                    motivo_baixa || null,
+                    motivo_baixa ||
+                    null,
 
-                    pagador_cpf_cnpj || null,
+                    pagador_cpf_cnpj ||
+                    null,
 
-                    pagador_endereco || null,
+                    pagador_endereco ||
+                    null,
 
-                    pagador_numero || null,
+                    pagador_numero ||
+                    null,
 
-                    pagador_cep || null,
+                    pagador_cep ||
+                    null,
 
-                    instrucoes || null,
+                    instrucoes ||
+                    null,
 
                     id
                 ];
@@ -2238,6 +2770,7 @@ app.put(
                                 "Erro ao atualizar boleto:",
                                 erro
                             );
+
 
                             return res
                                 .status(500)
@@ -2262,11 +2795,7 @@ app.put(
 
 
                         registrarAuditoria(
-
-                            usuario_logado ||
-                            vendedor ||
-                            "Sistema",
-
+                            usuarioSessao.nome,
                             `Atualizou o boleto ${num_boleto} - Status: ${status || "Pendente"}`
                         );
 
@@ -2281,55 +2810,52 @@ app.put(
         );
     }
 );
-
 // =========================================================
 // REGISTRAR COBRANÇA / TRATATIVA
+// USUÁRIO PRECISA ESTAR AUTENTICADO
 // =========================================================
 
 app.post(
     "/api/cobrancas",
+    autenticarUsuario,
     (req, res) => {
 
         const {
             boleto_id,
-            usuario_remetente,
             mensagem
         } = req.body;
 
 
-        // Verifica campos obrigatórios
-        if (!boleto_id) {
-
-            return res
-                .status(400)
-                .json({
-                    erro: "Informe o boleto."
-                });
-        }
-
-
-        if (!mensagem || !mensagem.trim()) {
+        if (
+            !boleto_id ||
+            !mensagem ||
+            String(mensagem).trim() === ""
+        ) {
 
             return res
                 .status(400)
                 .json({
                     erro:
-                        "Informe a situação ou tratativa da cobrança."
+                        "Informe o boleto e a mensagem da cobrança."
                 });
         }
 
 
-        const usuario =
-            usuario_remetente ||
-            "Usuário";
+        const usuarioSessao =
+            req.session.usuario;
 
 
-        // Verifica se o boleto existe
+        // =================================================
+        // BUSCA O BOLETO
+        // =================================================
+
         const sqlBoleto = `
             SELECT
                 id,
                 num_boleto,
-                razao_social
+                razao_social,
+                vencimento,
+                status
             FROM boletos
             WHERE id = ?
             LIMIT 1
@@ -2339,25 +2865,31 @@ app.post(
         db.query(
             sqlBoleto,
             [boleto_id],
-            (erroBoleto, boletos) => {
+            (
+                erroBoleto,
+                boletos
+            ) => {
 
                 if (erroBoleto) {
 
                     console.error(
-                        "Erro ao verificar boleto:",
+                        "Erro ao buscar boleto:",
                         erroBoleto
                     );
+
 
                     return res
                         .status(500)
                         .json({
                             erro:
-                                "Erro ao verificar boleto."
+                                "Erro ao buscar boleto."
                         });
                 }
 
 
-                if (boletos.length === 0) {
+                if (
+                    boletos.length === 0
+                ) {
 
                     return res
                         .status(404)
@@ -2372,11 +2904,11 @@ app.post(
                     boletos[0];
 
 
-                // =========================================
-                // SALVA NO HISTÓRICO DE COBRANÇAS
-                // =========================================
+                // =================================================
+                // SALVA O HISTÓRICO DA COBRANÇA
+                // =================================================
 
-                const sql = `
+                const sqlCobranca = `
                     INSERT INTO historico_cobrancas
                     (
                         boleto_id,
@@ -2388,23 +2920,28 @@ app.post(
 
 
                 db.query(
-                    sql,
+                    sqlCobranca,
                     [
                         boleto_id,
-                        usuario,
-                        mensagem.trim()
+
+                        // O usuário não vem mais
+                        // do navegador.
+                        usuarioSessao.nome,
+
+                        String(mensagem).trim()
                     ],
                     (
-                        erro,
+                        erroCobranca,
                         resultado
                     ) => {
 
-                        if (erro) {
+                        if (erroCobranca) {
 
                             console.error(
                                 "Erro ao registrar cobrança:",
-                                erro
+                                erroCobranca
                             );
+
 
                             return res
                                 .status(500)
@@ -2415,22 +2952,22 @@ app.post(
                         }
 
 
-                        // =================================
+                        // =========================================
                         // AUDITORIA
-                        // =================================
+                        // =========================================
 
                         registrarAuditoria(
-                            usuario,
+                            usuarioSessao.nome,
                             `Registrou uma tratativa de cobrança no boleto ${boleto.num_boleto} do cliente ${boleto.razao_social}`
                         );
 
 
-                        return res
+                        res
                             .status(201)
                             .json({
 
                                 mensagem:
-                                    "Status de cobrança registrado com sucesso.",
+                                    "Cobrança registrada com sucesso.",
 
                                 id:
                                     resultado.insertId
@@ -2442,37 +2979,31 @@ app.post(
     }
 );
 
-// =========================================================
-// REGISTRAR COBRANÇA / TRATATIVA
-// =========================================================
-
-app.post(
-    "/api/cobrancas",
-    (req, res) => {
-        // código que te passei para salvar a cobrança
-    }
-);
-
 
 // =========================================================
-// BUSCAR HISTÓRICO DE COBRANÇA POR BOLETO
+// HISTÓRICO DE COBRANÇAS
+// USUÁRIO PRECISA ESTAR AUTENTICADO
 // =========================================================
 
 app.get(
     "/api/cobrancas/:boletoId",
+    autenticarUsuario,
     (req, res) => {
 
         const boletoId =
             req.params.boletoId;
+
 
         if (!boletoId) {
 
             return res
                 .status(400)
                 .json({
-                    erro: "Boleto não informado."
+                    erro:
+                        "Boleto não informado."
                 });
         }
+
 
         const sql = `
             SELECT
@@ -2483,13 +3014,19 @@ app.get(
                 data_envio AS data_registro
             FROM historico_cobrancas
             WHERE boleto_id = ?
-            ORDER BY data_envio DESC, id DESC
+            ORDER BY
+                data_envio DESC,
+                id DESC
         `;
+
 
         db.query(
             sql,
             [boletoId],
-            (erro, resultados) => {
+            (
+                erro,
+                resultados
+            ) => {
 
                 if (erro) {
 
@@ -2497,6 +3034,7 @@ app.get(
                         "Erro ao buscar histórico de cobranças:",
                         erro
                     );
+
 
                     return res
                         .status(500)
@@ -2506,7 +3044,10 @@ app.get(
                         });
                 }
 
-                res.json(resultados);
+
+                res.json(
+                    resultados
+                );
             }
         );
     }
@@ -2514,22 +3055,34 @@ app.get(
 
 
 // =========================================================
-// LISTAR AUDITORIA
+// AUDITORIA
+// SOMENTE ADMINISTRADOR
 // =========================================================
 
 app.get(
     "/api/auditoria",
+    somenteAdministrador,
     (req, res) => {
 
         const sql = `
-            SELECT *
+            SELECT
+                id,
+                usuario,
+                acao,
+                data_hora
             FROM auditoria
-            ORDER BY id DESC
+            ORDER BY
+                data_hora DESC,
+                id DESC
         `;
+
 
         db.query(
             sql,
-            (erro, resultados) => {
+            (
+                erro,
+                resultados
+            ) => {
 
                 if (erro) {
 
@@ -2538,14 +3091,19 @@ app.get(
                         erro
                     );
 
+
                     return res
                         .status(500)
                         .json({
-                            erro: "Erro ao buscar auditoria."
+                            erro:
+                                "Erro ao buscar auditoria."
                         });
                 }
 
-                res.json(resultados);
+
+                res.json(
+                    resultados
+                );
             }
         );
     }
@@ -2553,7 +3111,7 @@ app.get(
 
 
 // =========================================================
-// PÁGINA PRINCIPAL
+// ROTA INICIAL
 // =========================================================
 
 app.get(
@@ -2575,6 +3133,7 @@ app.get(
 // =========================================================
 
 const PORT = 3000;
+
 
 app.listen(
     PORT,

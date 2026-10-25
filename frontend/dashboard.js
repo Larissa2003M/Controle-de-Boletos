@@ -1,8 +1,3 @@
-// =========================================================
-// DASHBOARD.JS
-// PARTE 1/3 - CORRIGIDO
-// =========================================================
-
 const API_URL = "http://localhost:3000";
 
 
@@ -19,6 +14,7 @@ function carregarUsuarioLocal() {
         const dados =
             localStorage.getItem("usuario") ||
             localStorage.getItem("usuarioLogado");
+
 
         if (!dados) {
 
@@ -61,7 +57,6 @@ function carregarUsuarioLocal() {
 }
 
 
-// Carrega o usuário imediatamente
 carregarUsuarioLocal();
 
 
@@ -124,57 +119,148 @@ function ehOperador() {
 
 function obterHeadersAPI() {
 
-    /*
-        Recarrega o usuário antes de cada requisição.
-
-        Isso é importante quando você sai de um usuário
-        e entra com outro, por exemplo:
-
-        Carlos Mendes -> Vendedor
-
-        depois:
-
-        Administrador -> Administrador
-    */
-
-    carregarUsuarioLocal();
-
-
     return {
 
         "Content-Type":
-            "application/json",
-
-        "x-usuario-id":
-            String(
-                usuarioLogado.id || ""
-            )
+            "application/json"
 
     };
 }
 
 
 // =========================================================
-// VERIFICAR LOGIN
+// LIMPAR DADOS DE LOGIN
 // =========================================================
 
-function verificarLogin() {
+function limparDadosLogin() {
 
-    carregarUsuarioLocal();
+    localStorage.removeItem(
+        "usuario"
+    );
 
 
-    if (
-        !usuarioLogado ||
-        !usuarioLogado.id
-    ) {
+    localStorage.removeItem(
+        "usuarioLogado"
+    );
 
-        console.error(
-            "Usuário não encontrado no localStorage."
+
+    usuarioLogado = {};
+}
+
+
+// =========================================================
+// REDIRECIONAR PARA LOGIN
+// =========================================================
+
+function redirecionarParaLogin(
+    mostrarMensagem = false
+) {
+
+    limparDadosLogin();
+
+
+    if (mostrarMensagem) {
+
+        alert(
+            "Sua sessão expirou. Faça login novamente."
+        );
+    }
+
+
+    window.location.href =
+        "html/login.html";
+}
+
+
+// =========================================================
+// VERIFICAR SESSÃO REAL
+// =========================================================
+
+async function verificarLogin() {
+
+    try {
+
+        const resposta =
+            await fetch(
+                `${API_URL}/api/sessao`,
+                {
+                    method: "GET",
+
+                    credentials:
+                        "include"
+                }
+            );
+
+
+        const resultado =
+            await resposta
+                .json()
+                .catch(
+                    () => ({})
+                );
+
+
+        if (!resposta.ok) {
+
+            console.error(
+                "Sessão inválida:",
+                resultado
+            );
+
+
+            redirecionarParaLogin(
+                false
+            );
+
+
+            return false;
+        }
+
+
+        if (
+            !resultado.usuario ||
+            !resultado.usuario.id
+        ) {
+
+            redirecionarParaLogin(
+                false
+            );
+
+
+            return false;
+        }
+
+
+        usuarioLogado =
+            resultado.usuario;
+
+
+        // Mantém somente os dados necessários
+        // para exibição da interface.
+        localStorage.setItem(
+            "usuario",
+            JSON.stringify(
+                usuarioLogado
+            )
         );
 
 
+        return true;
+
+
+    } catch (erro) {
+
+        console.error(
+            "Erro ao verificar sessão:",
+            erro
+        );
+
+
+        limparDadosLogin();
+
+
         alert(
-            "Usuário não identificado. Faça login novamente."
+            "Não foi possível verificar a sessão com o servidor."
         );
 
 
@@ -184,9 +270,6 @@ function verificarLogin() {
 
         return false;
     }
-
-
-    return true;
 }
 
 
@@ -206,10 +289,6 @@ function carregarUsuarioTela() {
         usuarioLogado.permissao ||
         "Usuário";
 
-
-    // -----------------------------------------------------
-    // Procura pelos IDs primeiro
-    // -----------------------------------------------------
 
     const campoNome =
         document.getElementById(
@@ -252,9 +331,7 @@ function carregarUsuarioTela() {
     }
 
 
-    // -----------------------------------------------------
     // Compatibilidade com HTML antigo
-    // -----------------------------------------------------
 
     const strongAntigo =
         document.querySelector(
@@ -313,10 +390,8 @@ function carregarUsuarioTela() {
 
 function configurarPermissoesMenu() {
 
-    // -----------------------------------------------------
     // USUÁRIOS
     // Somente Administrador
-    // -----------------------------------------------------
 
     const menuUsuarios =
         document.getElementById(
@@ -334,10 +409,8 @@ function configurarPermissoesMenu() {
     }
 
 
-    // -----------------------------------------------------
     // AUDITORIA
     // Vendedor não acessa
-    // -----------------------------------------------------
 
     if (ehVendedor()) {
 
@@ -393,16 +466,31 @@ function configurarLogout() {
 
 
     botaoLogout.onclick =
-        function () {
+        async function () {
 
-            localStorage.removeItem(
-                "usuario"
-            );
+            try {
+
+                await fetch(
+                    `${API_URL}/api/logout`,
+                    {
+                        method: "POST",
+
+                        credentials:
+                            "include"
+                    }
+                );
 
 
-            localStorage.removeItem(
-                "usuarioLogado"
-            );
+            } catch (erro) {
+
+                console.error(
+                    "Erro ao encerrar sessão:",
+                    erro
+                );
+            }
+
+
+            limparDadosLogin();
 
 
             window.location.href =
@@ -413,7 +501,6 @@ function configurarLogout() {
 
 // =========================================================
 // TOGGLE DO MENU
-// CORRIGE: toggleMenu is not defined
 // =========================================================
 
 function toggleMenu(id) {
@@ -429,6 +516,7 @@ function toggleMenu(id) {
             id
         );
 
+
         return;
     }
 
@@ -439,7 +527,6 @@ function toggleMenu(id) {
 }
 
 
-// Deixa disponível para onclick do HTML
 window.toggleMenu =
     toggleMenu;
 
@@ -631,32 +718,42 @@ function calcularStatusAutomatico(
 
 
 // =========================================================
-// BUSCAR BOLETOS COM AUTENTICAÇÃO
+// TRATAR SESSÃO EXPIRADA
 // =========================================================
 
-async function buscarBoletosAPI() {
-
-    carregarUsuarioLocal();
-
+function tratarSessaoExpirada(
+    resposta,
+    retorno
+) {
 
     if (
-        !usuarioLogado ||
-        !usuarioLogado.id
+        resposta.status !== 401
     ) {
 
-        throw new Error(
-            "Usuário não autenticado."
-        );
+        return false;
     }
 
 
-    console.log(
-        "Buscando /api/boletos com usuário:",
-        usuarioLogado.id,
-        usuarioLogado.nome,
-        usuarioLogado.permissao
+    console.error(
+        "Sessão expirada:",
+        retorno
     );
 
+
+    redirecionarParaLogin(
+        true
+    );
+
+
+    return true;
+}
+
+
+// =========================================================
+// BUSCAR BOLETOS COM AUTENTICAÇÃO POR SESSÃO
+// =========================================================
+
+async function buscarBoletosAPI() {
 
     const resposta =
         await fetch(
@@ -665,7 +762,10 @@ async function buscarBoletosAPI() {
                 method: "GET",
 
                 headers:
-                    obterHeadersAPI()
+                    obterHeadersAPI(),
+
+                credentials:
+                    "include"
             }
         );
 
@@ -678,30 +778,18 @@ async function buscarBoletosAPI() {
             );
 
 
-    // -----------------------------------------------------
-    // TRATAR 401
-    // -----------------------------------------------------
-
     if (
-        resposta.status === 401
+        tratarSessaoExpirada(
+            resposta,
+            retorno
+        )
     ) {
 
-        console.error(
-            "401 /api/boletos:",
-            retorno
-        );
-
-
         throw new Error(
-            retorno.erro ||
-            "Usuário não autenticado."
+            "Sessão expirada."
         );
     }
 
-
-    // -----------------------------------------------------
-    // OUTROS ERROS
-    // -----------------------------------------------------
 
     if (!resposta.ok) {
 
@@ -718,10 +806,6 @@ async function buscarBoletosAPI() {
     }
 
 
-    // -----------------------------------------------------
-    // PRECISA SER ARRAY
-    // -----------------------------------------------------
-
     if (
         !Array.isArray(retorno)
     ) {
@@ -737,16 +821,6 @@ async function buscarBoletosAPI() {
         );
     }
 
-
-    /*
-        IMPORTANTE:
-
-        O server.js deve fazer a restrição principal
-        do Vendedor.
-
-        Mesmo assim, mantemos uma segunda proteção
-        no Dashboard.
-    */
 
     if (ehVendedor()) {
 
@@ -811,8 +885,7 @@ function mostrarDebugDashboard() {
 
 
     console.log(
-        "Header:",
-        obterHeadersAPI()
+        "Autenticação: sessão do servidor"
     );
 
 
@@ -838,10 +911,72 @@ function definirTexto(id, valor) {
     const elemento =
         document.getElementById(id);
 
+
     if (elemento) {
 
         elemento.textContent =
             valor;
+    }
+}
+
+
+// =========================================================
+// CONFIGURAR ÁREAS COM BARRA DE ROLAGEM
+// =========================================================
+
+function configurarAreasRolagem() {
+
+
+
+    const tabela =
+        document.getElementById(
+            "tabelaProximosVencimentos"
+        );
+
+
+    if (tabela) {
+
+        const areaTabela =
+            tabela.closest(
+                ".table-container"
+            )
+            ||
+            tabela.parentElement;
+
+
+        if (areaTabela) {
+
+            areaTabela.style.maxHeight =
+                "330px";
+
+            areaTabela.style.overflowY =
+                "auto";
+
+            areaTabela.style.overflowX =
+                "auto";
+        }
+    }
+
+
+    const listaCobrancas =
+        document.getElementById(
+            "listaCobrancasDashboard"
+        );
+
+
+    if (listaCobrancas) {
+
+        listaCobrancas.style.maxHeight =
+            "330px";
+
+        listaCobrancas.style.overflowY =
+            "auto";
+
+        listaCobrancas.style.overflowX =
+            "hidden";
+
+        listaCobrancas.style.paddingRight =
+            "6px";
     }
 }
 
@@ -858,11 +993,6 @@ async function carregarDadosDashboard() {
             "Carregando dados do Dashboard..."
         );
 
-
-        // =============================================
-        // BUSCA CENTRALIZADA
-        // JÁ ENVIA x-usuario-id
-        // =============================================
 
         const boletos =
             await buscarBoletosAPI();
@@ -896,9 +1026,9 @@ async function carregarDadosDashboard() {
         );
 
 
-        // =============================================
+        // =================================================
         // CONTADORES
-        // =============================================
+        // =================================================
 
         let qtdTotal = 0;
 
@@ -909,9 +1039,9 @@ async function carregarDadosDashboard() {
         let qtdVencidos = 0;
 
 
-        // =============================================
+        // =================================================
         // VALORES
-        // =============================================
+        // =================================================
 
         let valorTotal = 0;
 
@@ -922,9 +1052,9 @@ async function carregarDadosDashboard() {
         let valorVencidos = 0;
 
 
-        // =============================================
+        // =================================================
         // CALCULAR
-        // =============================================
+        // =================================================
 
         boletosDashboard.forEach(
             boleto => {
@@ -944,9 +1074,7 @@ async function carregarDadosDashboard() {
                 valorTotal += valor;
 
 
-                // -------------------------------------
                 // PAGO / BAIXA
-                // -------------------------------------
 
                 if (
                     status === "Pago" ||
@@ -962,9 +1090,7 @@ async function carregarDadosDashboard() {
                 }
 
 
-                // -------------------------------------
                 // VENCIDO
-                // -------------------------------------
 
                 if (
                     status === "Vencido"
@@ -979,9 +1105,7 @@ async function carregarDadosDashboard() {
                 }
 
 
-                // -------------------------------------
                 // PENDENTE
-                // -------------------------------------
 
                 qtdPendentes++;
 
@@ -991,9 +1115,9 @@ async function carregarDadosDashboard() {
         );
 
 
-        // =============================================
+        // =================================================
         // ATUALIZAR CARDS
-        // =============================================
+        // =================================================
 
         definirTexto(
             "cardTotalQtd",
@@ -1019,9 +1143,9 @@ async function carregarDadosDashboard() {
         );
 
 
-        // =============================================
+        // =================================================
         // RESUMO FINANCEIRO
-        // =============================================
+        // =================================================
 
         definirTexto(
             "summaryTotalValor",
@@ -1055,31 +1179,35 @@ async function carregarDadosDashboard() {
         );
 
 
-        // =============================================
+        // =================================================
         // CONTADOR DA NOTIFICAÇÃO
-        // =============================================
+        // =================================================
 
         atualizarContadorNotificacoes(
             qtdVencidos
         );
 
 
-        // =============================================
+        // =================================================
         // PRÓXIMOS VENCIMENTOS
-        // =============================================
+        // =================================================
 
         renderizarProximosVencimentos(
             boletosDashboard
         );
 
 
-        // =============================================
+        // =================================================
         // COBRANÇAS
-        // =============================================
+        // =================================================
 
         renderizarCobrancasDashboard(
             boletosDashboard
         );
+
+
+        // Garante a barra de rolagem
+        configurarAreasRolagem();
 
 
         console.log(
@@ -1095,11 +1223,20 @@ async function carregarDadosDashboard() {
         );
 
 
-        mostrarErroDashboard(
-            erro.message
-        );
+        if (
+            erro.message !==
+            "Sessão expirada."
+        ) {
+
+            mostrarErroDashboard(
+                erro.message
+            );
+        }
     }
 }
+// =========================================================
+// EXIBIÇÃO DOS DADOS
+// =========================================================
 
 
 // =========================================================
@@ -1158,9 +1295,9 @@ function mostrarErroDashboard(mensagem) {
     );
 
 
-    // ---------------------------------------------
+    // -----------------------------------------------------
     // TABELA DE PRÓXIMOS VENCIMENTOS
-    // ---------------------------------------------
+    // -----------------------------------------------------
 
     const tabela =
         document.getElementById(
@@ -1193,9 +1330,9 @@ function mostrarErroDashboard(mensagem) {
     }
 
 
-    // ---------------------------------------------
+    // -----------------------------------------------------
     // COBRANÇAS
-    // ---------------------------------------------
+    // -----------------------------------------------------
 
     const lista =
         document.getElementById(
@@ -1227,6 +1364,9 @@ function mostrarErroDashboard(mensagem) {
 
         `;
     }
+
+
+    configurarAreasRolagem();
 }
 
 
@@ -1237,11 +1377,6 @@ function mostrarErroDashboard(mensagem) {
 function atualizarContadorNotificacoes(
     quantidade
 ) {
-
-    /*
-        Compatibilidade com diferentes IDs/classes
-        que podem existir no index.html.
-    */
 
     const contador =
         document.getElementById(
@@ -1284,6 +1419,7 @@ function atualizarContadorNotificacoes(
 
 // =========================================================
 // PRÓXIMOS VENCIMENTOS
+// BOLETOS PENDENTES
 // =========================================================
 
 function renderizarProximosVencimentos(
@@ -1302,9 +1438,9 @@ function renderizarProximosVencimentos(
     }
 
 
-    // =============================================
+    // =====================================================
     // SOMENTE PENDENTES
-    // =============================================
+    // =====================================================
 
     const pendentes =
         boletos
@@ -1358,16 +1494,12 @@ function renderizarProximosVencimentos(
                         dataB.getTime()
                     );
                 }
-            )
-            .slice(
-                0,
-                5
             );
 
 
-    // =============================================
-    // NENHUM
-    // =============================================
+    // =====================================================
+    // NENHUM BOLETO PENDENTE
+    // =====================================================
 
     if (
         pendentes.length === 0
@@ -1396,13 +1528,15 @@ function renderizarProximosVencimentos(
         `;
 
 
+        configurarAreasRolagem();
+
         return;
     }
 
 
-    // =============================================
+    // =====================================================
     // MONTAR TABELA
-    // =============================================
+    // =====================================================
 
     tabela.innerHTML =
         pendentes
@@ -1473,11 +1607,17 @@ function renderizarProximosVencimentos(
                 `
             )
             .join("");
+
+
+
+
+    configurarAreasRolagem();
 }
 
 
 // =========================================================
 // COBRANÇAS DO DASHBOARD
+// SOMENTE BOLETOS VENCIDOS
 // =========================================================
 
 function renderizarCobrancasDashboard(
@@ -1496,9 +1636,9 @@ function renderizarCobrancasDashboard(
     }
 
 
-    // =============================================
+    // =====================================================
     // SOMENTE VENCIDOS
-    // =============================================
+    // =====================================================
 
     const vencidos =
         boletos
@@ -1536,21 +1676,18 @@ function renderizarCobrancasDashboard(
 
 
                     // Mais antigo primeiro
+
                     return (
                         dataA.getTime() -
                         dataB.getTime()
                     );
                 }
-            )
-            .slice(
-                0,
-                5
             );
 
 
-    // =============================================
+    // =====================================================
     // NENHUM VENCIDO
-    // =============================================
+    // =====================================================
 
     if (
         vencidos.length === 0
@@ -1576,13 +1713,15 @@ function renderizarCobrancasDashboard(
         `;
 
 
+        configurarAreasRolagem();
+
         return;
     }
 
 
-    // =============================================
-    // MOSTRAR VENCIDOS
-    // =============================================
+    // =====================================================
+    // MOSTRAR TODOS OS VENCIDOS
+    // =====================================================
 
     lista.innerHTML =
         vencidos
@@ -1638,6 +1777,10 @@ function renderizarCobrancasDashboard(
                 `
             )
             .join("");
+
+
+
+    configurarAreasRolagem();
 }
 
 
@@ -1666,6 +1809,7 @@ function mostrarNotificacoes() {
         alert(
             "Nenhum boleto vencido."
         );
+
 
         return;
     }
@@ -1762,7 +1906,6 @@ function abrirPaginaCobrancas() {
 }
 
 
-// Deixa disponível caso exista onclick no HTML
 window.abrirPaginaCobrancas =
     abrirPaginaCobrancas;
 
@@ -1799,6 +1942,10 @@ async function atualizarDashboard() {
 
 window.atualizarDashboard =
     atualizarDashboard;
+
+// =========================================================
+// INICIALIZAÇÃO E CONTROLE DA SESSÃO
+// =========================================================
 
 
 // =========================================================
@@ -1844,50 +1991,22 @@ async function iniciarDashboard() {
     );
 
 
-    // =====================================================
-    // VERIFICAR LOGIN
-    // =====================================================
+   
 
-    if (
-        !verificarLogin()
-    ) {
+    const sessaoValida =
+        await verificarLogin();
+
+
+    if (!sessaoValida) {
 
         return;
     }
 
-
-    // =====================================================
-    // MOSTRAR USUÁRIO
-    // =====================================================
-
     carregarUsuarioTela();
-
-
-    // =====================================================
-    // PERMISSÕES DO MENU
-    // =====================================================
-
     configurarPermissoesMenu();
-
-
-    // =====================================================
-    // LOGOUT
-    // =====================================================
-
     configurarLogout();
-
-
-    // =====================================================
-    // NOTIFICAÇÕES
-    // =====================================================
-
     configurarNotificacoes();
-
-
-    // =====================================================
-    // DEBUG
-    // =====================================================
-
+    configurarAreasRolagem();
     mostrarDebugDashboard();
 
 
@@ -1927,76 +2046,6 @@ if (
 }
 
 
-// =========================================================
-// ATUALIZAÇÃO AUTOMÁTICA
-// =========================================================
-
-/*
-    Atualiza os dados do Dashboard
-    automaticamente a cada 60 segundos.
-
-    Não recarrega a página.
-    Apenas consulta novamente a API.
-*/
-
-const intervaloDashboard =
-    setInterval(
-        async function () {
-
-            // -----------------------------------------
-            // Verificar se ainda existe usuário
-            // -----------------------------------------
-
-            carregarUsuarioLocal();
-
-
-            if (
-                !usuarioLogado ||
-                !usuarioLogado.id
-            ) {
-
-                return;
-            }
-
-
-            try {
-
-                await carregarDadosDashboard();
-
-
-                console.log(
-                    "Dashboard atualizado automaticamente."
-                );
-
-
-            } catch (erro) {
-
-                console.error(
-                    "Erro na atualização automática:",
-                    erro
-                );
-            }
-
-        },
-
-        60000
-    );
-
-
-// =========================================================
-// PARAR INTERVALO AO SAIR DA PÁGINA
-// =========================================================
-
-window.addEventListener(
-    "beforeunload",
-    function () {
-
-        clearInterval(
-            intervaloDashboard
-        );
-    }
-);
-
 
 // =========================================================
 // ATUALIZAR AO VOLTAR PARA A ABA
@@ -2015,16 +2064,19 @@ document.addEventListener(
         }
 
 
-        carregarUsuarioLocal();
+        const sessaoValida =
+            await verificarLogin();
 
 
-        if (
-            !usuarioLogado ||
-            !usuarioLogado.id
-        ) {
+        if (!sessaoValida) {
 
             return;
         }
+
+
+        // Atualiza os dados locais do usuário
+
+        carregarUsuarioTela();
 
 
         try {
@@ -2044,16 +2096,174 @@ document.addEventListener(
 
 
 // =========================================================
-// GARANTIR FUNÇÕES GLOBAIS
+// TRATAR SESSÃO EXPIRADA EM OUTRAS REQUISIÇÕES
 // =========================================================
 
-/*
-    Essas funções ficam no window porque
-    podem ser chamadas diretamente pelo HTML,
-    por exemplo:
+async function verificarRespostaAutenticada(
+    resposta
+) {
 
-    onclick="toggleMenu('menuCadastro')"
-*/
+    if (
+        resposta.status !== 401
+    ) {
+
+        return true;
+    }
+
+
+    console.warn(
+        "A sessão do usuário expirou."
+    );
+
+
+    redirecionarParaLogin(
+        true
+    );
+
+
+    return false;
+}
+
+
+// =========================================================
+// CONTROLE DE INATIVIDADE DA INTERFACE
+// =========================================================
+
+const TEMPO_INATIVIDADE =
+    30 * 60 * 1000;
+
+
+let temporizadorInatividade =
+    null;
+
+
+function encerrarPorInatividade() {
+
+    console.warn(
+        "Sessão encerrada por inatividade."
+    );
+
+
+
+    fetch(
+        `${API_URL}/api/logout`,
+        {
+            method: "POST",
+
+            credentials:
+                "include"
+        }
+    )
+        .catch(
+            erro => {
+
+                console.error(
+                    "Erro ao encerrar sessão por inatividade:",
+                    erro
+                );
+            }
+        )
+        .finally(
+            () => {
+
+                limparDadosLogin();
+
+
+                alert(
+                    "Sua sessão expirou por inatividade. Faça login novamente."
+                );
+
+
+                window.location.href =
+                    "html/login.html";
+            }
+        );
+}
+
+
+// =========================================================
+// REINICIAR CONTADOR DE INATIVIDADE
+// =========================================================
+
+function reiniciarTemporizadorInatividade() {
+
+    if (
+        temporizadorInatividade
+    ) {
+
+        clearTimeout(
+            temporizadorInatividade
+        );
+    }
+
+
+    temporizadorInatividade =
+        setTimeout(
+            encerrarPorInatividade,
+            TEMPO_INATIVIDADE
+        );
+}
+
+
+// =========================================================
+// ATIVIDADES QUE RENOVAM O TEMPO DA INTERFACE
+// =========================================================
+
+const eventosAtividade = [
+
+    "mousedown",
+
+    "keydown",
+
+    "touchstart",
+
+    "scroll"
+
+];
+
+
+eventosAtividade.forEach(
+    evento => {
+
+        document.addEventListener(
+            evento,
+            reiniciarTemporizadorInatividade,
+            {
+                passive: true
+            }
+        );
+    }
+);
+
+
+// Inicia o contador de 30 minutos
+
+reiniciarTemporizadorInatividade();
+
+
+// =========================================================
+// PARAR TEMPORIZADOR AO SAIR DA PÁGINA
+// =========================================================
+
+window.addEventListener(
+    "beforeunload",
+    function () {
+
+        if (
+            temporizadorInatividade
+        ) {
+
+            clearTimeout(
+                temporizadorInatividade
+            );
+        }
+    }
+);
+
+
+// =========================================================
+// GARANTIR FUNÇÕES GLOBAIS
+// =========================================================
 
 window.toggleMenu =
     toggleMenu;
@@ -2065,6 +2275,10 @@ window.mostrarNotificacoes =
 
 window.carregarDadosDashboard =
     carregarDadosDashboard;
+
+
+window.atualizarDashboard =
+    atualizarDashboard;
 
 
 // =========================================================
@@ -2083,8 +2297,10 @@ console.log(
 
 
 console.log(
-    "x-usuario-id:",
-    usuarioLogado.id || "não encontrado"
+    "Autenticação por sessão habilitada."
 );
 
 
+console.log(
+    "Tempo de inatividade: 30 minutos."
+);
