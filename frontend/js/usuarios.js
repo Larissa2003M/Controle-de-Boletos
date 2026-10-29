@@ -458,23 +458,64 @@ function configurarEventos() {
 
 
     // -----------------------------------------------------
-    // FORMULÁRIO
-    // -----------------------------------------------------
+// FORMULÁRIO
+// -----------------------------------------------------
 
-    const formulario =
-        document.getElementById(
-            "formUsuario"
-        );
+const formulario =
+    document.getElementById(
+        "formUsuario"
+    );
 
 
-    if (formulario) {
+// -----------------------------------------------------
+// DEFINIR PERFIL AUTOMATICAMENTE PELO SETOR
+// -----------------------------------------------------
 
-        formulario.addEventListener(
-            "submit",
-            salvarUsuario
-        );
-    }
+const campoSetor =
+    document.getElementById(
+        "setor"
+    );
 
+const campoPermissao =
+    document.getElementById(
+        "permissao"
+    );
+
+
+if (campoSetor && campoPermissao) {
+
+    campoSetor.addEventListener(
+        "change",
+        () => {
+
+            if (campoSetor.value === "Vendas") {
+
+                campoPermissao.value =
+                    "Vendedor";
+
+            } else if (
+                campoSetor.value === "Financeiro"
+            ) {
+
+                campoPermissao.value =
+                    "Operador";
+
+            } else {
+
+                campoPermissao.value = "";
+            }
+        }
+    );
+}
+
+
+if (formulario) {
+
+    formulario.addEventListener(
+        "submit",
+        salvarUsuario
+    );
+}
 
     // -----------------------------------------------------
     // BOTÃO CANCELAR
@@ -1015,6 +1056,25 @@ function obterUsuariosFiltrados() {
 }
 
 
+    // =========================================================
+    // MASCARAR CPF NA LISTAGEM
+    // =========================================================
+
+    function mascararCPF(cpf) {
+
+        if (!cpf) {
+            return "";
+        }
+
+        const numeros = String(cpf).replace(/\D/g, "");
+
+        if (numeros.length !== 11) {
+            return "***.***.***-**";
+        }
+
+        return `***.${numeros.substring(3, 6)}.${numeros.substring(6, 9)}-**`;
+    }
+
 // =========================================================
 // RENDERIZAR TABELA
 // =========================================================
@@ -1157,9 +1217,7 @@ function renderizarUsuarios() {
 
 
                 <td>
-
-                    ${usuario.cpf || ""}
-
+                    ${mascararCPF(usuario.cpf)}
                 </td>
 
 
@@ -1416,24 +1474,6 @@ function editarUsuario(id) {
 
 
     preencherCampo(
-        "endereco",
-        usuario.endereco
-    );
-
-
-    preencherCampo(
-        "numero",
-        usuario.numero
-    );
-
-
-    preencherCampo(
-        "bairro",
-        usuario.bairro
-    );
-
-
-    preencherCampo(
         "setor",
         usuario.setor
     );
@@ -1561,21 +1601,6 @@ async function salvarUsuario(
     const senha =
         obterValor("senha");
 
-
-    const telefone =
-        obterValor("telefone");
-
-
-    const endereco =
-        obterValor("endereco");
-
-
-    const numero =
-        obterValor("numero");
-
-
-    const bairro =
-        obterValor("bairro");
 
 
     const setor =
@@ -1712,12 +1737,6 @@ async function salvarUsuario(
         senha,
 
         telefone,
-
-        endereco,
-
-        numero,
-
-        bairro,
 
         setor,
 

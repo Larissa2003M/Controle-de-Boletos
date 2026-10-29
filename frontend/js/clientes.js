@@ -207,26 +207,54 @@ let listaClientesGlobal = [];
 let clienteEmEdicaoId = null;
 
 
+
 // =========================================================
 // INICIALIZAR PÁGINA
 // =========================================================
 
 document.addEventListener("DOMContentLoaded", async () => {
-    // Confirma a sessão antes de carregar os dados.
+
+    // Estado inicial da tela: mostrar a listagem.
+    if (painelCadastroCliente) {
+        painelCadastroCliente.style.display = "none";
+    }
+
+    if (secaoFiltros) {
+        secaoFiltros.style.display = "block";
+    }
+
+    if (secaoTabela) {
+        secaoTabela.style.display = "block";
+    }
+
+    // Confirma a sessão no servidor.
     const sessaoValida = await verificarSessaoCliente();
 
     if (!sessaoValida) {
+        console.error("Sessão inválida. Clientes não foram carregados.");
+        return;
+    }
+
+    // Bloqueia o acesso do Vendedor à tela Clientes.
+    const permissao = String(
+        usuarioLogado?.permissao || ""
+    ).trim().toLowerCase();
+
+    if (permissao === "vendedor") {
+        alert(
+            "Acesso negado! Você não tem permissão para acessar a tela de Clientes."
+        );
+
+        window.location.replace("../index.html");
         return;
     }
 
     atualizarMenuUsuario();
-
     configurarLogout();
-
     configurarMascaras();
 
-    // As funções de carregamento serão preservadas
-    // nas próximas partes do arquivo.
+    console.log("Iniciando carregamento dos clientes...");
+
     await carregarClientes();
     await carregarVendedoresSelect();
 });
@@ -323,46 +351,220 @@ function configurarLogout() {
         }
     };
 }
+
+
+// =========================================================
+// VALIDAR CPF
+// =========================================================
+
+function validarCPF(documento) {
+    const cpf = String(documento || "").replace(/\D/g, "");
+
+    if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) {
+        return false;
+    }
+
+    let soma = 0;
+
+    for (let i = 0; i < 9; i++) {
+        soma += Number(cpf[i]) * (10 - i);
+    }
+
+    let resto = (soma * 10) % 11;
+    if (resto === 10) resto = 0;
+
+    if (resto !== Number(cpf[9])) {
+        return false;
+    }
+
+    soma = 0;
+
+    for (let i = 0; i < 10; i++) {
+        soma += Number(cpf[i]) * (11 - i);
+    }
+
+    resto = (soma * 10) % 11;
+    if (resto === 10) resto = 0;
+
+    return resto === Number(cpf[10]);
+}
+
+
+// =========================================================
+// VALIDAR CNPJ NUMÉRICO E ALFANUMÉRICO
+// =========================================================
+
+function validarCNPJ(documento) {
+
+    const cnpj = String(documento || "")
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "");
+
+    if (cnpj.length !== 14) {
+        return false;
+    }
+
+    // As 12 primeiras posições podem conter letras e números.
+    // Os dois últimos caracteres devem ser os dígitos verificadores.
+    const base = cnpj.substring(0, 12);
+    const digitosInformados = cnpj.substring(12);
+
+    if (!/^[A-Z0-9]{12}$/.test(base)) {
+        return false;
+    }
+
+    if (!/^\d{2}$/.test(digitosInformados)) {
+        return false;
+    }
+
+    // Evita sequências formadas pelo mesmo caractere.
+    if (/^(.)\1{11}$/.test(base)) {
+        return false;
+    }
+
+    function valorCaractere(caractere) {
+
+        // Regra do CNPJ alfanumérico:
+        // valor do caractere = código ASCII - 48.
+        return caractere.charCodeAt(0) - 48;
+    }
+
+    function calcularDigito(baseCalculo, pesos) {
+
+        let soma = 0;
+
+        for (let i = 0; i < baseCalculo.length; i++) {
+
+            soma +=
+                valorCaractere(baseCalculo[i]) *
+                pesos[i];
+        }
+
+        const resto = soma % 11;
+
+        return resto < 2
+            ? 0
+            : 11 - resto;
+    }
+
+    const primeiro = calcularDigito(
+        base,
+        [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    );
+
+    if (primeiro !== Number(cnpj[12])) {
+        return false;
+    }
+
+    const segundo = calcularDigito(
+        base + primeiro,
+        [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    );
+
+    return segundo === Number(cnpj[13]);
+}
+
 // =========================================================
 // MÁSCARAS
 // =========================================================
 
 function configurarMascaras() {
 
-    // CNPJ
-    const campoCnpj = document.getElementById("cnpj");
+    // =========================================================
+    // MÁSCARA DINÂMICA CPF / CNPJ
+    // =========================================================
 
-    if (campoCnpj) {
-        campoCnpj.addEventListener("input", () => {
-            let valor = campoCnpj.value.replace(/\D/g, "");
-            valor = valor.substring(0, 14);
+    const campoDocumento = document.getElementById("cnpj");
+    const tipoPessoa = document.getElementById("tipoPessoa");
 
-            valor = valor.replace(
-                /^(\d{2})(\d)/,
-                "$1.$2"
+    function atualizarTipoDocumento() {
+        if (!campoDocumento || !tipoPessoa) return;
+
+        const pessoaFisica = tipoPessoa.value === "PF";
+
+        campoDocumento.placeholder = pessoaFisica ? "CPF" : "CNPJ";
+        campoDocumento.maxLength = pessoaFisica ? 14 : 18;
+
+        campoDocumento.value = "";
+    }
+
+    function formatarDocumento(valor, tipo) {
+
+        // CPF continua aceitando somente números
+        if (tipo === "PF") {
+            let numeros = String(valor || "")
+                .replace(/\D/g, "")
+                .substring(0, 11);
+
+            return numeros
+                .replace(/^(\d{3})(\d)/, "$1.$2")
+                .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+                .replace(/\.(\d{3})(\d)/, ".$1-$2");
+        }
+
+        // CNPJ aceita letras e números
+        let cnpj = String(valor || "")
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, "")
+            .substring(0, 14);
+
+        // As 12 primeiras posições podem conter letras e números
+        const base = cnpj.substring(0, 12);
+
+        // Os dois últimos dígitos verificadores devem ser numéricos
+        const digitos = cnpj
+            .substring(12)
+            .replace(/\D/g, "")
+            .substring(0, 2);
+
+        cnpj = base + digitos;
+
+        let formatado = "";
+
+        if (cnpj.length > 0) {
+            formatado += cnpj.substring(0, 2);
+        }
+
+        if (cnpj.length > 2) {
+            formatado += "." + cnpj.substring(2, 5);
+        }
+
+        if (cnpj.length > 5) {
+            formatado += "." + cnpj.substring(5, 8);
+        }
+
+        if (cnpj.length > 8) {
+            formatado += "/" + cnpj.substring(8, 12);
+        }
+
+        if (cnpj.length > 12) {
+            formatado += "-" + cnpj.substring(12, 14);
+        }
+
+        return formatado;
+    }
+
+    if (tipoPessoa && campoDocumento) {
+        tipoPessoa.addEventListener(
+            "change",
+            atualizarTipoDocumento
+        );
+
+        campoDocumento.addEventListener("input", () => {
+            campoDocumento.value = formatarDocumento(
+                campoDocumento.value,
+                tipoPessoa.value
             );
-
-            valor = valor.replace(
-                /^(\d{2})\.(\d{3})(\d)/,
-                "$1.$2.$3"
-            );
-
-            valor = valor.replace(
-                /\.(\d{3})(\d)/,
-                ".$1/$2"
-            );
-
-            valor = valor.replace(
-                /(\d{4})(\d)/,
-                "$1-$2"
-            );
-
-            campoCnpj.value = valor;
         });
+
+        atualizarTipoDocumento();
     }
 
 
+    // =========================================================
     // TELEFONE
+    // =========================================================
+
     const campoTelefone =
         document.getElementById("telefone");
 
@@ -395,12 +597,17 @@ function configurarMascaras() {
     }
 
 
+    // =========================================================
     // CEP
+    // =========================================================
+
     const campoCep = document.getElementById("cep");
 
     if (campoCep) {
         campoCep.addEventListener("input", () => {
-            let valor = campoCep.value.replace(/\D/g, "");
+            let valor =
+                campoCep.value.replace(/\D/g, "");
+
             valor = valor.substring(0, 8);
 
             if (valor.length > 5) {
@@ -413,9 +620,8 @@ function configurarMascaras() {
             campoCep.value = valor;
         });
     }
+
 }
-
-
 // =========================================================
 // CARREGAR VENDEDORES NO SELECT
 // =========================================================
@@ -545,11 +751,20 @@ function abrirPainelCadastro() {
         top: 0,
         behavior: "smooth"
     });
+
+    const botoesFormulario = document.getElementById(
+    "botoesFormularioCliente"
+);
+
+    if (botoesFormulario) {
+        botoesFormulario.style.display = "flex";
+    }
 }
 
 
-// =========================================================
-// FECHAR FORMULÁRIO
+
+ // =========================================================
+// FECHAR FORMULÁRIO E VOLTAR À LISTAGEM
 // =========================================================
 
 function fecharFormulario() {
@@ -574,8 +789,17 @@ function fecharFormulario() {
         formCliente.reset();
     }
 
+    const botoesFormulario = document.getElementById(
+    "botoesFormularioCliente"
+        );
+
+        if (botoesFormulario) {
+            botoesFormulario.style.display = "none";
+        }
+
     clienteEmEdicaoId = null;
 }
+
 
 
 // =========================================================
@@ -684,6 +908,7 @@ function obterValorCliente(id) {
 }
 
 
+
 // =========================================================
 // SALVAR CLIENTE
 // =========================================================
@@ -692,9 +917,23 @@ async function salvarCliente(evento) {
 
     evento.preventDefault();
 
+    const tipoPessoa =
+        obterValorCliente("tipoPessoa");
+
+    let documento = obterValorCliente("cnpj");
+
+    if (tipoPessoa === "PF") {
+        documento = documento.replace(/\D/g, "");
+    } else {
+        documento = documento
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, "");
+    }
+
     const dados = {
+        tipo_pessoa: tipoPessoa,
         razao_social: obterValorCliente("razaoSocial"),
-        cnpj: obterValorCliente("cnpj"),
+        cnpj: documento,
         telefone: obterValorCliente("telefone"),
         email: obterValorCliente("email"),
         cep: obterValorCliente("cep"),
@@ -703,16 +942,46 @@ async function salvarCliente(evento) {
         bairro: obterValorCliente("bairro"),
         cidade: obterValorCliente("cidade"),
         estado: obterValorCliente("estado"),
-        vendedor_id: obterValorCliente("vendedor")
+        vendedor: obterValorCliente("vendedor"),
+        status: obterValorCliente("status") || "Ativo"
     };
 
-    if (!dados.razao_social || !dados.cnpj) {
+    // Validar campos obrigatórios
+    if (!dados.razao_social || !documento) {
         alert(
-            "Preencha a razão social e o CNPJ."
+            tipoPessoa === "PF"
+                ? "Preencha o nome completo e o CPF."
+                : "Preencha a razão social e o CNPJ."
         );
         return;
     }
 
+    // Validar CPF ou CNPJ
+    if (tipoPessoa === "PF") {
+
+        if (typeof validarCPF !== "function" ||
+            !validarCPF(documento)) {
+
+            alert("CPF inválido. Confira os números digitados.");
+            return;
+        }
+
+    } else if (tipoPessoa === "PJ") {
+
+        if (typeof validarCNPJ !== "function" ||
+            !validarCNPJ(documento)) {
+
+            alert("CNPJ inválido. Confira os números digitados.");
+            return;
+        }
+
+    } else {
+
+        alert("Selecione se o cliente é Pessoa Física ou Jurídica.");
+        return;
+    }
+
+    // Definir URL e método
     const url = clienteEmEdicaoId
         ? `${API_URL}/api/clientes/${clienteEmEdicaoId}`
         : `${API_URL}/api/clientes`;
@@ -722,17 +991,15 @@ async function salvarCliente(evento) {
         : "POST";
 
     try {
-        const resposta = await fetch(
-            url,
-            {
-                method: metodo,
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                credentials: "include",
-                body: JSON.stringify(dados)
-            }
-        );
+
+        const resposta = await fetch(url, {
+            method: metodo,
+            headers: {
+                "Content-Type": "application/json"
+            },
+            credentials: "include",
+            body: JSON.stringify(dados)
+        });
 
         const resultado =
             await resposta.json().catch(() => ({}));
@@ -767,6 +1034,7 @@ async function salvarCliente(evento) {
         await carregarClientes();
 
     } catch (erro) {
+
         console.error("Erro ao salvar cliente:", erro);
 
         alert(
@@ -775,6 +1043,7 @@ async function salvarCliente(evento) {
         );
     }
 }
+
 // =========================================================
 // CARREGAR CLIENTES
 // =========================================================
@@ -818,6 +1087,9 @@ async function carregarClientes() {
 
         listaClientesGlobal = resultado;
 
+        console.log("Clientes recebidos da API:", resultado);
+        console.log("Quantidade de clientes:", resultado.length);
+
         renderizarClientes();
 
     } catch (erro) {
@@ -852,8 +1124,10 @@ function obterClientesFiltrados() {
         : "";
 
     const cnpj = filtroCnpj
-        ? filtroCnpj.value.replace(/\D/g, "")
-        : "";
+    ? filtroCnpj.value
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "")
+    : "";
 
     const vendedor = filtroVendedor
         ? filtroVendedor.value.trim()
@@ -876,12 +1150,13 @@ function obterClientesFiltrados() {
     }
 
     if (cnpj) {
-        lista = lista.filter(cliente =>
-            String(cliente.cnpj || "")
-                .replace(/\D/g, "")
-                .includes(cnpj)
-        );
-    }
+    lista = lista.filter(cliente =>
+        String(cliente.cnpj || "")
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, "")
+            .includes(cnpj)
+    );
+}
 
     if (vendedor) {
         lista = lista.filter(cliente =>
@@ -911,6 +1186,19 @@ function renderizarClientes() {
     const clientes = obterClientesFiltrados();
 
     listaClientes.innerHTML = "";
+
+    console.log("Elemento da tabela:", listaClientes);
+console.log("Clientes filtrados:", clientes.length);
+console.log(
+    "Contêiner da tabela:",
+    listaClientes.closest(".table-container")
+);
+
+console.log(
+    "Contêiner visível:",
+    listaClientes.closest(".table-container")
+        ?.getBoundingClientRect()
+);
 
     if (clientes.length === 0) {
         listaClientes.innerHTML = `
@@ -1009,6 +1297,7 @@ function editarCliente(id) {
 
     clienteEmEdicaoId = cliente.id;
 
+  
     const campos = {
         razaoSocial: cliente.razao_social,
         cnpj: cliente.cnpj,
@@ -1020,10 +1309,10 @@ function editarCliente(id) {
         bairro: cliente.bairro,
         cidade: cliente.cidade,
         estado: cliente.estado,
-        vendedor: cliente.vendedor_id ??
-            cliente.usuario_id ??
-            ""
+        vendedor: cliente.vendedor_id ?? cliente.usuario_id ?? "",
+        status: cliente.status || "Ativo"
     };
+
 
     Object.entries(campos).forEach(([idCampo, valor]) => {
         const campo = document.getElementById(idCampo);

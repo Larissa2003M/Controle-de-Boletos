@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -6,83 +7,241 @@
     <title>Auditoria - ControleBoleto</title>
     <link rel="stylesheet" href="../style.css">
 </head>
+
 <body>
 
-    <div class="layout">
-        <!-- MENU LATERAL -->
-        <aside class="sidebar">
-            <div class="logo">
-                <h2>ControleBoleto</h2>
-                <span>Sistema de Gestão</span>
+<div class="layout">
+
+    <!-- MENU LATERAL -->
+    <aside class="sidebar">
+
+        <div class="logo">
+            <h2>ControleBoleto</h2>
+            <span>Sistema de Gestão</span>
+        </div>
+
+        <nav class="menu">
+
+            <a href="../index.html" class="menu-item">
+                <span>▣</span> Dashboard
+            </a>
+
+            <div class="menu-group">
+                <div class="menu-title">
+                    <span>▤</span> Cadastro
+                </div>
+
+                <a href="usuarios.html">Usuários</a>
+                <a href="clientes.html">Clientes</a>
+                <a href="boletos.html">Boletos</a>
             </div>
 
-            <nav class="menu">
-                <a href="../index.html" class="menu-item">
-                    <span>▣</span> Dashboard
+            <a href="cobrancas.html" class="menu-item">
+                <span>◷</span> Cobranças
+            </a>
+
+            <div class="menu-group">
+                <div class="menu-title">
+                    <span>🛡️</span> Auditoria
+                </div>
+
+                <a href="auditoria.html" class="active">
+                    Logs do Sistema
                 </a>
-
-                <div class="menu-group">
-                    <div class="menu-title">
-                        <span>▤</span> Cadastro
-                    </div>
-                    <a href="usuarios.html">Usuários</a>
-                    <a href="clientes.html">Clientes</a>
-                    <a href="boletos.html">Boletos</a>
-                </div>
-
-                <a href="cobrancas.html" class="menu-item">
-                    <span>◷</span> Cobranças
-                </a>
-
-                <div class="menu-group">
-                    <div class="menu-title">
-                        <span>🛡️</span> Auditoria
-                    </div>
-                    <a href="auditoria.html" class="active">Logs do Sistema</a>
-                </div>
-            </nav>
-
-            <div class="user-menu">
-                <div class="user-avatar" id="userAvatar">F</div>
-                <div class="user-info">
-                    <strong id="userName">Financeiro</strong>
-                    <span id="userRole">Administrador</span>
-                </div>
-                <button type="button" id="btnLogout" class="logout" title="Sair">↪</button>
             </div>
-        </aside>
 
-        <!-- CONTEÚDO PRINCIPAL -->
-        <main class="main">
-            <header class="header" style="margin-bottom: 20px;">
+        </nav>
+
+        <!-- USUÁRIO LOGADO -->
+        <div class="user-menu">
+
+            <div class="user-avatar" id="userAvatar">F</div>
+
+            <div class="user-info">
+                <strong id="userName">Usuário</strong>
+                <span id="userRole">Administrador</span>
+            </div>
+
+            <button
+                type="button"
+                id="btnLogout"
+                class="logout"
+                title="Sair"
+            >↪</button>
+
+        </div>
+
+    </aside>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="main">
+
+        <header class="header" style="margin-bottom: 20px;">
+            <div>
                 <h1>Auditoria e Logs</h1>
-                <p style="margin: 4px 0 0 0; color: #64748b;">Monitore as atividades e acessos realizados no sistema</p>
-            </header>
 
-            <!-- TABELA DE LOGS -->
-            <div class="panel">
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Usuário</th>
-                                <th>Ação / Descrição</th>
-                                <th>Data e Hora</th>
-                            </tr>
-                        </thead>
-                        <tbody id="listaAuditoria">
-                            <tr>
-                                <td colspan="4" style="text-align: center; color: #64748b;">Carregando logs de auditoria...</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <p style="margin: 4px 0 0; color: #64748b;">
+                    Consulte as atividades, alterações e tentativas de acesso ao sistema.
+                </p>
+            </div>
+        </header>
+
+        <!-- FILTROS DE AUDITORIA -->
+        <section class="panel" style="margin-bottom: 20px;">
+
+            <h3 style="margin-top: 0;">
+                Filtros de consulta
+            </h3>
+
+            <form id="formFiltrosAuditoria">
+
+                <div class="auditoria-filtros">
+
+                    <div class="auditoria-campo">
+                        <label for="filtroUsuario">
+                            Usuário
+                        </label>
+
+                        <input
+                            type="text"
+                            id="filtroUsuario"
+                            name="usuario"
+                            placeholder="Nome do usuário"
+                        >
+                    </div>
+
+                    <div class="auditoria-campo">
+                        <label for="filtroAcao">
+                            Ação
+                        </label>
+
+                        <select id="filtroAcao" name="acao">
+                            <option value="">Todas as ações</option>
+                            <option value="login">Login</option>
+                            <option value="cadastro">Cadastro</option>
+                            <option value="atualização">Atualização</option>
+                            <option value="inativação">Inativação</option>
+                            <option value="cobrança">Cobrança</option>
+                        </select>
+                    </div>
+
+                    <div class="auditoria-campo">
+                        <label for="dataInicio">
+                            Data inicial
+                        </label>
+
+                        <input
+                            type="date"
+                            id="dataInicio"
+                            name="dataInicio"
+                        >
+                    </div>
+
+                    <div class="auditoria-campo">
+                        <label for="dataFim">
+                            Data final
+                        </label>
+
+                        <input
+                            type="date"
+                            id="dataFim"
+                            name="dataFim"
+                        >
+                    </div>
+
+                </div>
+
+                <div class="auditoria-botoes">
+
+                    <button
+                        type="button"
+                        id="btnLimparAuditoria"
+                        class="btn-limpar-auditoria"
+                    >
+                        Limpar filtros
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="btn-filtrar-auditoria"
+                    >
+                        Filtrar registros
+                    </button>
+
+                </div>
+
+            </form>
+
+        </section>
+
+        <!-- TABELA DE AUDITORIA -->
+        <section class="panel">
+
+            <div style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 15px;
+            ">
+                <div>
+                    <h3 style="margin: 0;">
+                        Registros de auditoria
+                    </h3>
+
+                    <p style="
+                        color: #64748b;
+                        font-size: 13px;
+                        margin-bottom: 0;
+                    ">
+                        Histórico para consulta. Os registros não podem ser editados ou excluídos por esta tela.
+                    </p>
                 </div>
             </div>
-        </main>
-    </div>
 
-   
-    <script src="../js/auditoria.js"></script>
+            <div class="table-container">
+
+                <table class="auditoria-tabela">
+
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Usuário</th>
+                            <th>Ação</th>
+                            <th>Entidade</th>
+                            <th>Valor anterior</th>
+                            <th>Valor novo</th>
+                            <th>IP</th>
+                            <th>Resultado</th>
+                            <th>Data e hora</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="listaAuditoria">
+                        <tr>
+                            <td
+                                colspan="9"
+                                style="
+                                    text-align: center;
+                                    color: #64748b;
+                                "
+                            >
+                                Carregando logs de auditoria...
+                            </td>
+                        </tr>
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+<script src="../js/auditoria.js"></script>
+
 </body>
 </html>

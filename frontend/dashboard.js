@@ -1038,6 +1038,10 @@ async function carregarDadosDashboard() {
 
         let qtdVencidos = 0;
 
+        let qtdBaixa = 0;
+
+        let qtdProximos7Dias = 0;
+
 
         // =================================================
         // VALORES
@@ -1051,7 +1055,8 @@ async function carregarDadosDashboard() {
 
         let valorVencidos = 0;
 
-
+        let valorBaixa = 0;
+        
         // =================================================
         // CALCULAR
         // =================================================
@@ -1074,16 +1079,30 @@ async function carregarDadosDashboard() {
                 valorTotal += valor;
 
 
-                // PAGO / BAIXA
+                // PAGO
 
                 if (
-                    status === "Pago" ||
-                    status === "Baixa"
+                    status === "Pago"
                 ) {
 
                     qtdPagos++;
 
                     valorPagos +=
+                        valor;
+
+                    return;
+                }
+
+
+                // BAIXA
+
+                if (
+                    status === "Baixa"
+                ) {
+
+                    qtdBaixa++;
+
+                    valorBaixa +=
                         valor;
 
                     return;
@@ -1111,8 +1130,66 @@ async function carregarDadosDashboard() {
 
                 valorPendentes +=
                     valor;
+
+
+                // PRÓXIMOS 7 DIAS
+
+                const dataVencimento =
+                    converterDataLocal(
+                        boleto.vencimento
+                    );
+
+                if (dataVencimento) {
+
+                    const hoje =
+                        new Date();
+
+                    hoje.setHours(
+                        0,
+                        0,
+                        0,
+                        0
+                    );
+
+                    const limite7Dias =
+                        new Date(hoje);
+
+                    limite7Dias.setDate(
+                        limite7Dias.getDate() + 7
+                    );
+
+                    dataVencimento.setHours(
+                        0,
+                        0,
+                        0,
+                        0
+                    );
+
+                    if (
+                        dataVencimento >= hoje &&
+                        dataVencimento <= limite7Dias
+                    ) {
+
+                        qtdProximos7Dias++;
+                    }
+                }
             }
         );
+
+        // =================================================
+        // INDICADORES GERENCIAIS
+        // =================================================
+
+        const percentualInadimplencia =
+            qtdTotal > 0
+                ? (qtdVencidos / qtdTotal) * 100
+                : 0;
+
+
+        const ticketMedio =
+            qtdTotal > 0
+                ? valorTotal / qtdTotal
+                : 0;
 
 
         // =================================================
@@ -1140,6 +1217,11 @@ async function carregarDadosDashboard() {
         definirTexto(
             "cardVencidosQtd",
             qtdVencidos
+        );
+
+        definirTexto(
+            "cardBaixaQtd",
+            qtdBaixa
         );
 
 
@@ -1175,6 +1257,40 @@ async function carregarDadosDashboard() {
             "summaryVencidosValor",
             formatarMoeda(
                 valorVencidos
+            )
+        );
+
+        definirTexto(
+            "summaryBaixaValor",
+            formatarMoeda(
+                valorBaixa
+            )
+        );
+
+
+        definirTexto(
+            "summaryInadimplencia",
+            percentualInadimplencia
+                .toLocaleString(
+                    "pt-BR",
+                    {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    }
+                ) + "%"
+        );
+
+
+        definirTexto(
+            "summaryProximos7Dias",
+            qtdProximos7Dias
+        );
+
+
+        definirTexto(
+            "summaryTicketMedio",
+            formatarMoeda(
+                ticketMedio
             )
         );
 

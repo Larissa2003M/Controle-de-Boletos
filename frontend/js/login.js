@@ -1,4 +1,3 @@
-
 const formLogin = document.getElementById("formLogin");
 const API_URL = "http://localhost:3000";
 
@@ -46,7 +45,9 @@ if (formLogin) {
                     resultado
                 );
 
-                alert("O servidor não retornou os dados esperados do usuário.");
+                alert(
+                    "O servidor não retornou os dados esperados do usuário."
+                );
                 return;
             }
 
@@ -55,7 +56,11 @@ if (formLogin) {
                 JSON.stringify(resultado.usuario)
             );
 
-            // Confirma se o servidor reconhece a sessão criada.
+
+            // =====================================================
+            // CONFIRMA SE O SERVIDOR RECONHECE A SESSÃO
+            // =====================================================
+
             const respostaSessao = await fetch(
                 `${API_URL}/api/sessao`,
                 {
@@ -66,8 +71,15 @@ if (formLogin) {
 
             const sessao = await respostaSessao.json();
 
-            console.log("Status da sessão:", respostaSessao.status);
-            console.log("Dados da sessão:", sessao);
+            console.log(
+                "Status da sessão:",
+                respostaSessao.status
+            );
+
+            console.log(
+                "Dados da sessão:",
+                sessao
+            );
 
             if (
                 !respostaSessao.ok ||
@@ -83,21 +95,50 @@ if (formLogin) {
                     "O login foi aceito, mas a sessão não foi reconhecida. " +
                     "Verifique o cookie da sessão no navegador."
                 );
+
                 return;
             }
 
-            // Atualiza os dados locais com os dados confirmados pelo servidor.
+
+            // =====================================================
+            // ATUALIZA OS DADOS LOCAIS
+            // =====================================================
+
             localStorage.setItem(
                 "usuario",
                 JSON.stringify(sessao.usuario)
             );
 
+
             formLogin.reset();
 
-            window.location.href = "../index.html";
+
+            // =====================================================
+            // TROCA OBRIGATÓRIA DE SENHA NO PRIMEIRO ACESSO
+            // =====================================================
+
+            if (resultado.trocar_senha === true) {
+
+                window.location.href =
+                    "./trocar-senha.html";
+
+                return;
+            }
+
+
+            // =====================================================
+            // ACESSO NORMAL AO SISTEMA
+            // =====================================================
+
+            window.location.href =
+                "../index.html";
 
         } catch (erro) {
-            console.error("Erro durante o login:", erro);
+
+            console.error(
+                "Erro durante o login:",
+                erro
+            );
 
             alert(
                 "Não foi possível concluir o login. " +

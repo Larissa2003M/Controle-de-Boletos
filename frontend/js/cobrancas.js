@@ -29,13 +29,28 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const btnLogout = document.getElementById("btnLogout");
-    if (btnLogout) {
-        btnLogout.onclick = () => {
+
+if (btnLogout) {
+    btnLogout.onclick = async () => {
+        try {
+            const resposta = await fetch(`${API_URL}/api/logout`, {
+                method: "POST",
+                credentials: "include"
+            });
+
+            if (!resposta.ok && resposta.status !== 401) {
+                throw new Error("Não foi possível encerrar a sessão.");
+            }
+        } catch (erro) {
+            console.error("Erro ao encerrar sessão:", erro);
+        } finally {
             localStorage.removeItem("usuario");
             localStorage.removeItem("usuarioLogado");
+
             window.location.href = "login.html";
-        };
-    }
+        }
+    };
+}
 
     carregarDadosCobranca();
 });
@@ -58,43 +73,82 @@ function calcularStatusAutomatico(vencimentoStr, statusAtual) {
     return "Pendente";
 }
 
-// Realiza a requisição assíncrona para buscar os boletos da API e aplica restrições de exibição baseadas no perfil do usuário
+
+ // Realiza a requisição dos boletos e aplica os filtros de exibição conforme o perfil do usuário
 async function carregarDadosCobranca() {
     try {
         let usuarioAtual = {};
+
         try {
-            usuarioAtual = JSON.parse(localStorage.getItem("usuario") || localStorage.getItem("usuarioLogado") || "{}");
+            usuarioAtual = JSON.parse(
+                localStorage.getItem("usuario") ||
+                localStorage.getItem("usuarioLogado") ||
+                "{}"
+            );
         } catch (e) {
             console.error("Erro ao ler localStorage:", e);
         }
 
         const resposta = await fetch(`${API_URL}/api/boletos`, {
-
+            method: "GET",
+            credentials: "include",
             headers: {
-                "x-usuario-id": usuarioAtual.id
+                "Accept": "application/json"
             }
-
         });
-        
+
+        if (resposta.status === 401) {
+            localStorage.removeItem("usuario");
+            localStorage.removeItem("usuarioLogado");
+
+            alert("Sua sessão expirou. Faça login novamente.");
+            window.location.href = "login.html";
+            return;
+        }
+
+        if (resposta.status === 403) {
+            alert("Você não tem permissão para consultar estes boletos.");
+            return;
+        }
+
+        if (!resposta.ok) {
+            throw new Error("Erro ao consultar os boletos.");
+        }
+
         const todosBoletos = await resposta.json();
 
-        const permissao = String(usuarioAtual.permissao || "").trim().toLowerCase();
-        const nomeUsuario = String(usuarioAtual.nome || "").trim().toLowerCase();
+        if (!Array.isArray(todosBoletos)) {
+            throw new Error("A resposta da API não contém uma lista válida de boletos.");
+        }
+
+        const permissao = String(
+            usuarioAtual.permissao || ""
+        ).trim().toLowerCase();
+
+        const nomeUsuario = String(
+            usuarioAtual.nome || ""
+        ).trim().toLowerCase();
 
         if (permissao === "vendedor") {
             listaBoletosGlobal = todosBoletos.filter(b => {
                 if (!b.vendedor) return false;
-                return String(b.vendedor).trim().toLowerCase() === nomeUsuario;
+
+                return String(b.vendedor)
+                    .trim()
+                    .toLowerCase() === nomeUsuario;
             });
         } else {
             listaBoletosGlobal = todosBoletos;
         }
 
         aplicarFiltrosCobranca();
+
     } catch (erro) {
         console.error("Erro ao carregar dados para cobrança:", erro);
+        alert("Não foi possível carregar os boletos. Verifique sua conexão com o servidor.");
     }
 }
+
 
 // Renderiza na tabela de cobranças os títulos pendentes ou vencidos com seus respectivos botões de ação e modais
 function renderizarTabelaCobrancas(boletos) {

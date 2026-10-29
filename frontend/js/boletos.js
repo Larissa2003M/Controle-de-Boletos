@@ -933,113 +933,12 @@ function boletoPertenceAoVendedor(
 
 
 // =========================================================
-// PREENCHER DADOS DO CLIENTE
-// =========================================================
-
-function preencherDadosClienteSelecionado() {
-
-    const campoCliente =
-        document.getElementById(
-            "razaoSocialBoleto"
-        );
-
-
-    if (!campoCliente) {
-
-        return;
-    }
-
-
-    const cliente =
-        encontrarCliente(
-            campoCliente.value
-        );
-
-
-    if (!cliente) {
-
-        preencherCampo(
-            "cpfCnpjPagador",
-            ""
-        );
-
-        preencherCampo(
-            "enderecoPagador",
-            ""
-        );
-
-        preencherCampo(
-            "numeroPagador",
-            ""
-        );
-
-        preencherCampo(
-            "cepPagador",
-            ""
-        );
-
-        return;
-    }
-
-
-    preencherCampo(
-        "cpfCnpjPagador",
-        cliente.cnpj || ""
-    );
-
-
-    preencherCampo(
-        "enderecoPagador",
-        cliente.endereco || ""
-    );
-
-
-    preencherCampo(
-        "numeroPagador",
-        cliente.numero || ""
-    );
-
-
-    preencherCampo(
-        "cepPagador",
-        cliente.cep || ""
-    );
-}
-
-
-// =========================================================
-// EVENTO DO CLIENTE
-// =========================================================
-
-const campoCliente =
-    document.getElementById(
-        "razaoSocialBoleto"
-    );
-
-
-if (campoCliente) {
-
-    campoCliente.addEventListener(
-        "change",
-        preencherDadosClienteSelecionado
-    );
-
-
-    campoCliente.addEventListener(
-        "input",
-        preencherDadosClienteSelecionado
-    );
-}
-// =========================================================
 // MOSTRAR FORMULÁRIO
 // =========================================================
 
 function mostrarFormulario() {
 
-    /*
-     * VENDEDOR NÃO PODE CADASTRAR
-     * NEM EDITAR BOLETO.
-     */
+    
 
     if (ehVendedor()) {
 
@@ -3133,18 +3032,6 @@ if (formBoleto) {
                             ? boletoEmEdicao.motivo_baixa
                             : null,
 
-                    pagador_cpf_cnpj:
-                        cliente.cnpj || "",
-
-                    pagador_endereco:
-                        cliente.endereco || "",
-
-                    pagador_numero:
-                        cliente.numero || "",
-
-                    pagador_cep:
-                        cliente.cep || "",
-
                     instrucoes:
                         instrucoes,
 
@@ -3417,44 +3304,6 @@ window.prepararEdicaoBoleto =
 
         boletoEmEdicao =
             boleto;
-
-
-        // =================================================
-        // CLIENTE
-        // =================================================
-
-        preencherCampo(
-            "razaoSocialBoleto",
-            boleto.razao_social || ""
-        );
-
-
-        // =================================================
-        // DADOS DO PAGADOR
-        // =================================================
-
-        preencherCampo(
-            "cpfCnpjPagador",
-            boleto.pagador_cpf_cnpj || ""
-        );
-
-
-        preencherCampo(
-            "enderecoPagador",
-            boleto.pagador_endereco || ""
-        );
-
-
-        preencherCampo(
-            "numeroPagador",
-            boleto.pagador_numero || ""
-        );
-
-
-        preencherCampo(
-            "cepPagador",
-            boleto.pagador_cep || ""
-        );
 
 
         // =================================================
@@ -4108,22 +3957,7 @@ async function alterarStatusEmLote(
                     ? motivoBaixa
                     : null,
 
-            pagador_cpf_cnpj:
-                boleto.pagador_cpf_cnpj ||
-                "",
-
-            pagador_endereco:
-                boleto.pagador_endereco ||
-                "",
-
-            pagador_numero:
-                boleto.pagador_numero ||
-                "",
-
-            pagador_cep:
-                boleto.pagador_cep ||
-                "",
-
+            
             instrucoes:
                 boleto.instrucoes ||
                 "",

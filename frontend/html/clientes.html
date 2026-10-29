@@ -1,694 +1,447 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Clientes - ControleBoleto</title>
-
     <link rel="stylesheet" href="../style.css">
-
 </head>
-
 <body>
 
-    <div class="layout">
+<div class="layout">
 
-        <!-- MENU LATERAL -->
-        <aside class="sidebar">
+    <!-- MENU LATERAL -->
+    <aside class="sidebar">
+        <div class="logo">
+            <h2>ControleBoleto</h2>
+            <span>Sistema de Gestão</span>
+        </div>
 
-            <div class="logo">
+        <nav class="menu">
+            <a href="../index.html" class="menu-item">
+                <span>▣</span> Dashboard
+            </a>
 
-                <h2>ControleBoleto</h2>
-
-                <span>Sistema de Gestão</span>
-
+            <div class="menu-group">
+                <div class="menu-title">
+                    <span>▤</span> Cadastro
+                </div>
+                <a href="usuarios.html">Usuários</a>
+                <a href="clientes.html" class="active">Clientes</a>
+                <a href="boletos.html">Boletos</a>
             </div>
 
+            <a href="cobrancas.html" class="menu-item">
+                <span>◷</span> Cobranças
+            </a>
 
-            <nav class="menu">
-
-                <a
-                    href="../index.html"
-                    class="menu-item"
-                >
-                    <span>▣</span>
-                    Dashboard
-                </a>
-
-
-                <div class="menu-group">
-
-                    <div class="menu-title">
-                        <span>▤</span>
-                        Cadastro
-                    </div>
-
-                    <a href="usuarios.html">
-                        Usuários
-                    </a>
-
-                    <a
-                        href="clientes.html"
-                        class="active"
-                    >
-                        Clientes
-                    </a>
-
-                    <a href="boletos.html">
-                        Boletos
-                    </a>
-
+            <div class="menu-group">
+                <div class="menu-title">
+                    <span>🛡️</span> Auditoria
                 </div>
+                <a href="auditoria.html">Logs do Sistema</a>
+            </div>
+        </nav>
+
+        <!-- USUÁRIO LOGADO -->
+        <div class="user-menu">
+            <div class="user-avatar" id="userAvatar">F</div>
+
+            <div class="user-info">
+                <strong id="userName">Financeiro</strong>
+                <span id="userRole">Administrador</span>
+            </div>
+
+            <button
+                type="button"
+                id="btnLogout"
+                class="logout"
+                title="Sair"
+            >↪</button>
+        </div>
+    </aside>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="main">
+
+        <!-- CABEÇALHO -->
+        <header class="header">
+            <div>
+                <h1>Clientes</h1>
+                <p>Gerenciamento e cadastro de clientes e parceiros</p>
+            </div>
+
+            <button
+                type="button"
+                id="btnNovoCliente"
+                style="
+                    background:#2563eb;
+                    color:white;
+                    border:none;
+                    padding:10px 18px;
+                    border-radius:8px;
+                    cursor:pointer;
+                    font-weight:600;
+                "
+            >＋ Cadastrar Cliente</button>
+        </header>
+
+        
+<!-- FILTROS DE CONSULTA DE CLIENTES -->
+<div
+    id="secaoFiltros"
+    class="panel"
+    style="
+        margin-bottom:20px;
+        padding:15px;
+        background:#ffffff;
+        border:1px solid #e2e8f0;
+        border-radius:12px;
+    "
+>
+    <div
+        style="
+            display:grid;
+            grid-template-columns:1fr 2fr 2fr 2fr;
+            gap:15px;
+            align-items:center;
+        "
+    >
+        <input
+            type="text"
+            id="filtroCodigo"
+            placeholder="Código (ID)"
+            style="
+                width:100%;
+                box-sizing:border-box;
+                padding:10px;
+                border:1px solid #cbd5e1;
+                border-radius:8px;
+                font-size:14px;
+                outline-color:#2563eb;
+            "
+        >
+
+        <input
+            type="text"
+            id="filtroRazaoSocial"
+            placeholder="Razão Social ou Nome"
+            style="
+                width:100%;
+                box-sizing:border-box;
+                padding:10px;
+                border:1px solid #cbd5e1;
+                border-radius:8px;
+                font-size:14px;
+                outline-color:#2563eb;
+            "
+        >
+
+        <input
+            type="text"
+            id="filtroCnpj"
+            placeholder="CPF/CNPJ"
+            style="
+                width:100%;
+                box-sizing:border-box;
+                padding:10px;
+                border:1px solid #cbd5e1;
+                border-radius:8px;
+                font-size:14px;
+                outline-color:#2563eb;
+            "
+        >
+
+        <select
+            id="filtroVendedor"
+            style="
+                width:100%;
+                box-sizing:border-box;
+                padding:10px;
+                border:1px solid #cbd5e1;
+                border-radius:8px;
+                background:#ffffff;
+                font-size:14px;
+                outline-color:#2563eb;
+            "
+        >
+            <option value="">Todos os Vendedores</option>
+        </select>
+    </div>
+</div>
 
 
-                <a
-                    href="cobrancas.html"
-                    class="menu-item"
-                >
-                    <span>◷</span>
-                    Cobranças
-                </a>
-
-
-                <div class="menu-group">
-
-                    <div class="menu-title">
-                        <span>🛡️</span>
-                        Auditoria
-                    </div>
-
-                    <a href="auditoria.html">
-                        Logs do Sistema
-                    </a>
-
-                </div>
-
-            </nav>
-
-
-            <!-- USUÁRIO -->
-            <div class="user-menu">
-
-                <div
-                    class="user-avatar"
-                    id="userAvatar"
-                >
-                    F
-                </div>
-
-                <div class="user-info">
-
-                    <strong id="userName">
-                        Financeiro
-                    </strong>
-
-                    <span id="userRole">
-                        Administrador
-                    </span>
-
-                </div>
+        <!-- PAINEL DE CADASTRO / EDIÇÃO -->
+        <div
+            id="painelCadastroCliente"
+            class="panel"
+            style="display:none; margin-bottom:20px;"
+        >
+            <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                margin-bottom:15px;
+            ">
+                <h3 id="tituloPainelCliente" style="margin:0;">
+                    Cadastrar Novo Cliente
+                </h3>
 
                 <button
                     type="button"
-                    id="btnLogout"
-                    class="logout"
-                    title="Sair"
-                >
-                    ↪
-                </button>
-
+                    id="btnVoltarCliente"
+                    style="
+                        background:#64748b;
+                        color:white;
+                        border:none;
+                        padding:8px 14px;
+                        border-radius:6px;
+                        cursor:pointer;
+                    "
+                >⬅ Voltar</button>
             </div>
 
-        </aside>
-
-
-        <!-- CONTEÚDO PRINCIPAL -->
-        <main class="main">
-
-            <!-- CABEÇALHO -->
-            <header
-                class="header"
+            <form
+                id="formCliente"
                 style="
                     display:flex;
                     flex-direction:column;
-                    align-items:flex-start;
-                    gap:12px;
-                    margin-bottom:20px;
+                    gap:15px;
                 "
             >
-
-                <div>
-
-                    <h1>Clientes</h1>
-
-                    <p
-                        style="
-                            margin:4px 0 0 0;
-                            color:#64748b;
-                        "
+                <!-- RAZÃO SOCIAL / NOME FANTASIA -->
+                <div style="
+                    display:grid;
+                    grid-template-columns:2fr 2fr;
+                    gap:15px;
+                ">
+                    <input
+                        type="text"
+                        id="razaoSocial"
+                        placeholder="Razão Social ou Nome Completo"
+                        required
                     >
-                        Gerenciamento e cadastro de clientes e parceiros
-                    </p>
 
+                    <input
+                        type="text"
+                        id="nome_fantasia"
+                        placeholder="Nome Fantasia (opcional)"
+                    >
                 </div>
 
+                <!-- TIPO DE PESSOA / DOCUMENTO / INSCRIÇÃO ESTADUAL -->
+                <div style="
+                    display:grid;
+                    grid-template-columns:1fr 2fr 1fr;
+                    gap:15px;
+                ">
+                    <select id="tipoPessoa" name="tipo_pessoa" required>
+                        <option value="PJ">Pessoa Jurídica</option>
+                        <option value="PF">Pessoa Física</option>
+                    </select>
 
-                <!-- BOTÃO CADASTRAR -->
-                <div>
+                    <input
+                        type="text"
+                        id="cnpj"
+                        name="cnpj"
+                        placeholder="CNPJ"
+                        maxlength="18"
+                        required
+                    >
 
+                    <input
+                        type="text"
+                        id="inscricao_estadual"
+                        name="inscricao_estadual"
+                        placeholder="Inscrição Estadual"
+                    >
+                </div>
+
+                <!-- CONTATO -->
+                <input
+                    type="text"
+                    id="contato"
+                    name="contato"
+                    placeholder="Nome de contato"
+                >
+
+                <!-- TELEFONE / E-MAIL -->
+                <div style="
+                    display:grid;
+                    grid-template-columns:1fr 1fr;
+                    gap:15px;
+                ">
+                    <input
+                        type="text"
+                        id="telefone"
+                        name="telefone"
+                        placeholder="Telefone"
+                        maxlength="15"
+                    >
+
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        placeholder="E-mail"
+                    >
+                </div>
+
+                <!-- ENDEREÇO / NÚMERO / CEP / BAIRRO -->
+                <div style="
+                    display:grid;
+                    grid-template-columns:3fr 1fr 1fr 2fr;
+                    gap:15px;
+                ">
+                    <input
+                        type="text"
+                        id="endereco"
+                        name="endereco"
+                        placeholder="Endereço"
+                    >
+
+                    <input
+                        type="text"
+                        id="numero"
+                        name="numero"
+                        placeholder="Número"
+                    >
+
+                    <input
+                        type="text"
+                        id="cep"
+                        name="cep"
+                        placeholder="CEP"
+                        maxlength="9"
+                    >
+
+                    <input
+                        type="text"
+                        id="bairro"
+                        name="bairro"
+                        placeholder="Bairro"
+                    >
+                </div>
+
+                <!-- CIDADE / ESTADO -->
+                <div style="
+                    display:grid;
+                    grid-template-columns:2fr 1fr;
+                    gap:15px;
+                ">
+                    <input
+                        type="text"
+                        id="cidade"
+                        name="cidade"
+                        placeholder="Cidade"
+                    >
+
+                    <input
+                        type="text"
+                        id="estado"
+                        name="estado"
+                        placeholder="Estado (UF)"
+                        maxlength="2"
+                    >
+                </div>
+
+                <!-- VENDEDOR / STATUS -->
+                <div style="
+                    display:grid;
+                    grid-template-columns:1fr 1fr;
+                    gap:15px;
+                ">
+                    <select id="vendedor" name="vendedor_id" required>
+                        <option value="">Selecione o Vendedor</option>
+                    </select>
+
+                    <select id="status" name="status" required>
+                        <option value="Ativo">Ativo</option>
+                        <option value="Inativo">Inativo</option>
+                    </select>
+                </div>
+
+                <!-- BOTÕES DO FORMULÁRIO -->
+                <div style="
+                    display:flex;
+                    justify-content:flex-end;
+                    gap:10px;
+                    margin-top:10px;
+                ">
                     <button
                         type="button"
-                        id="btnNovoCliente"
+                        id="cancelarCliente"
+                        style="
+                            padding:10px 20px;
+                            border-radius:8px;
+                            cursor:pointer;
+                            background:#e2e8f0;
+                            color:#334155;
+                            border:none;
+                        "
+                    >Cancelar</button>
+
+                    <button
+                        type="submit"
                         style="
                             background:#2563eb;
                             color:white;
                             border:none;
-                            padding:10px 18px;
+                            padding:10px 20px;
                             border-radius:8px;
                             cursor:pointer;
                             font-weight:600;
-                            font-size:14px;
-                            display:inline-flex;
-                            align-items:center;
-                            gap:8px;
-                            box-shadow:0 2px 4px rgba(37,99,235,0.2);
-                            transition:background 0.2s;
                         "
-                    >
-
-                        <span style="font-size:16px;">
-                            ＋
-                        </span>
-
-                        Cadastrar Cliente
-
-                    </button>
-
+                    >Salvar Cliente</button>
                 </div>
-
-            </header>
-
-
-            <!-- FILTROS -->
-            <div
-                id="secaoFiltros"
-                class="panel"
-                style="
-                    margin-bottom:20px;
-                    padding:15px;
-                "
-            >
-
-                <div
-                    style="
-                        display:grid;
-                        grid-template-columns:1fr 2fr 2fr 2fr;
-                        gap:15px;
-                    "
-                >
-
-                    <input
-                        type="text"
-                        id="filtroCodigo"
-                        placeholder="Código (ID)"
-                        style="
-                            padding:10px;
-                            border:1px solid #cbd5e1;
-                            border-radius:8px;
-                        "
-                    >
-
-
-                    <input
-                        type="text"
-                        id="filtroRazaoSocial"
-                        placeholder="Razão Social"
-                        style="
-                            padding:10px;
-                            border:1px solid #cbd5e1;
-                            border-radius:8px;
-                        "
-                    >
-
-
-                    <input
-                        type="text"
-                        id="filtroCnpj"
-                        placeholder="CNPJ"
-                        style="
-                            padding:10px;
-                            border:1px solid #cbd5e1;
-                            border-radius:8px;
-                        "
-                    >
-
-
-                    <select
-                        id="filtroVendedor"
-                        style="
-                            padding:10px;
-                            border:1px solid #cbd5e1;
-                            border-radius:8px;
-                        "
-                    >
-
-                        <option value="">
-                            Todos os Vendedores
-                        </option>
-
-                    </select>
-
-                </div>
-
-            </div>
-
-
-            <!-- PAINEL CADASTRO / EDIÇÃO -->
-            <div
-                id="painelCadastroCliente"
-                class="panel"
-                style="
-                    display:none;
-                    margin-bottom:20px;
-                "
-            >
-
-                <div
-                    style="
-                        display:flex;
-                        justify-content:space-between;
-                        align-items:center;
-                        margin-bottom:15px;
-                    "
-                >
-
-                    <h3
-                        id="tituloPainelCliente"
-                        style="
-                            color:#1e293b;
-                            margin:0;
-                        "
-                    >
-                        Cadastrar Novo Cliente
-                    </h3>
-
-
-                    <button
-                        type="button"
-                        id="btnVoltarCliente"
-                        style="
-                            background:#64748b;
-                            color:white;
-                            border:none;
-                            padding:6px 14px;
-                            border-radius:6px;
-                            cursor:pointer;
-                            font-size:14px;
-                        "
-                    >
-                        ⬅ Voltar
-                    </button>
-
-                </div>
-
-
-                <!-- FORMULÁRIO -->
-                <form
-                    id="formCliente"
-                    style="
-                        display:flex;
-                        flex-direction:column;
-                        gap:15px;
-                    "
-                >
-
-                    <!-- RAZÃO SOCIAL / NOME FANTASIA -->
-                    <div
-                        style="
-                            display:grid;
-                            grid-template-columns:2fr 2fr;
-                            gap:15px;
-                        "
-                    >
-
-                        <input
-                            type="text"
-                            id="razao_social"
-                            placeholder="Razão Social"
-                            required
-                            style="
-                                padding:10px;
-                                border:1px solid #cbd5e1;
-                                border-radius:8px;
-                            "
-                        >
-
-
-                        <input
-                            type="text"
-                            id="nome_fantasia"
-                            placeholder="Nome Fantasia"
-                            style="
-                                padding:10px;
-                                border:1px solid #cbd5e1;
-                                border-radius:8px;
-                            "
-                        >
-
-                    </div>
-
-
-                    <!-- CNPJ / INSCRIÇÃO / CONTATO -->
-                    <div
-                        style="
-                            display:grid;
-                            grid-template-columns:1fr 1fr 1fr;
-                            gap:15px;
-                        "
-                    >
-
-                        <input
-                            type="text"
-                            id="cnpj"
-                            placeholder="CNPJ"
-                            maxlength="18"
-                            required
-                            style="
-                                padding:10px;
-                                border:1px solid #cbd5e1;
-                                border-radius:8px;
-                            "
-                        >
-
-
-                        <input
-                            type="text"
-                            id="inscricao_estadual"
-                            placeholder="Inscrição Estadual"
-                            style="
-                                padding:10px;
-                                border:1px solid #cbd5e1;
-                                border-radius:8px;
-                            "
-                        >
-
-
-                        <input
-                            type="text"
-                            id="contato"
-                            placeholder="Nome de Contato"
-                            style="
-                                padding:10px;
-                                border:1px solid #cbd5e1;
-                                border-radius:8px;
-                            "
-                        >
-
-                    </div>
-
-
-                    <!-- TELEFONE / EMAIL -->
-                    <div
-                        style="
-                            display:grid;
-                            grid-template-columns:1fr 1fr;
-                            gap:15px;
-                        "
-                    >
-
-                        <input
-                            type="text"
-                            id="telefone"
-                            placeholder="Telefone"
-                            maxlength="15"
-                            style="
-                                padding:10px;
-                                border:1px solid #cbd5e1;
-                                border-radius:8px;
-                            "
-                        >
-
-
-                        <input
-                            type="email"
-                            id="email"
-                            placeholder="E-mail"
-                            style="
-                                padding:10px;
-                                border:1px solid #cbd5e1;
-                                border-radius:8px;
-                            "
-                        >
-
-                    </div>
-
-
-                    <!-- ENDEREÇO / NÚMERO / CEP / BAIRRO -->
-                    <div
-                        style="
-                            display:grid;
-                            grid-template-columns:3fr 1fr 1fr 2fr;
-                            gap:15px;
-                        "
-                    >
-
-                        <input
-                            type="text"
-                            id="endereco"
-                            placeholder="Endereço"
-                            style="
-                                padding:10px;
-                                border:1px solid #cbd5e1;
-                                border-radius:8px;
-                            "
-                        >
-
-
-                        <input
-                            type="text"
-                            id="numero"
-                            placeholder="Número"
-                            style="
-                                padding:10px;
-                                border:1px solid #cbd5e1;
-                                border-radius:8px;
-                            "
-                        >
-
-
-                        <input
-                            type="text"
-                            id="cep"
-                            placeholder="CEP"
-                            maxlength="9"
-                            style="
-                                padding:10px;
-                                border:1px solid #cbd5e1;
-                                border-radius:8px;
-                            "
-                        >
-
-
-                        <input
-                            type="text"
-                            id="bairro"
-                            placeholder="Bairro"
-                            style="
-                                padding:10px;
-                                border:1px solid #cbd5e1;
-                                border-radius:8px;
-                            "
-                        >
-
-                    </div>
-
-
-                    <!-- VENDEDOR / STATUS -->
-                    <div
-                        style="
-                            display:grid;
-                            grid-template-columns:1fr 1fr;
-                            gap:15px;
-                        "
-                    >
-
-                        <select
-                            id="vendedor"
-                            required
-                            style="
-                                padding:10px;
-                                border:1px solid #cbd5e1;
-                                border-radius:8px;
-                            "
-                        >
-
-                            <option value="">
-                                Selecione o Vendedor
-                            </option>
-
-                        </select>
-
-
-                        <select
-                            id="status"
-                            style="
-                                padding:10px;
-                                border:1px solid #cbd5e1;
-                                border-radius:8px;
-                            "
-                        >
-
-                            <option value="Ativo">
-                                Ativo
-                            </option>
-
-                            <option value="Inativo">
-                                Inativo
-                            </option>
-
-                        </select>
-
-                    </div>
-
-
-                    <!-- BOTÕES -->
-                    <div
-                        style="
-                            display:flex;
-                            justify-content:flex-end;
-                            gap:10px;
-                            margin-top:10px;
-                        "
-                    >
-
-                        <button
-                            type="button"
-                            id="cancelarCliente"
-                            style="
-                                padding:10px 20px;
-                                border-radius:8px;
-                                cursor:pointer;
-                                background:#e2e8f0;
-                                color:#334155;
-                                border:none;
-                                font-weight:500;
-                            "
-                        >
-                            Cancelar
-                        </button>
-
-
-                        <button
-                            type="submit"
-                            style="
-                                background:#2563eb;
-                                color:white;
-                                border:none;
-                                padding:10px 20px;
-                                border-radius:8px;
-                                cursor:pointer;
-                                font-weight:600;
-                            "
-                        >
-                            Salvar Cliente
-                        </button>
-
-                    </div>
-
-                </form>
-
-            </div>
-
-
-            <!-- TABELA DE CLIENTES -->
-            <div
-                id="secaoTabela"
-                class="panel"
-            >
-
-                <div class="table-container">
-
-                    <table>
-
-                        <thead>
-
-                            <tr>
-
-                                <th
-                                    style="
-                                        width:40px;
-                                        text-align:center;
-                                    "
+            </form>
+        </div>
+
+        <!-- TABELA DE CLIENTES -->
+        <div
+            id="secaoTabela"
+            class="panel"
+            style="margin-top:20px;"
+        >
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width:40px; text-align:center;">
+                                <input
+                                    type="checkbox"
+                                    id="selecionarTodos"
                                 >
+                            </th>
+                            <th>ID</th>
+                            <th>Razão Social</th>
+                            <th>CPF/CNPJ</th>
+                            <th>Contato</th>
+                            <th>Telefone</th>
+                            <th>Vendedor</th>
+                            <th>Status</th>
+                            <th style="text-align:center;">Ação</th>
+                        </tr>
+                    </thead>
 
-                                    <input
-                                        type="checkbox"
-                                        id="selecionarTodos"
-                                    >
-
-                                </th>
-
-                                <th>ID</th>
-
-                                <th>Razão Social</th>
-
-                                <th>CNPJ</th>
-
-                                <th>Contato</th>
-
-                                <th>Telefone</th>
-
-                                <th>Vendedor</th>
-
-                                <th>Status</th>
-
-                                <th style="text-align:center;">
-                                    Ação
-                                </th>
-
-                            </tr>
-
-                        </thead>
-
-
-                        <tbody id="listaClientes">
-
-                            <tr>
-
-                                <td
-                                    colspan="9"
-                                    style="
-                                        text-align:center;
-                                        color:#64748b;
-                                    "
-                                >
-                                    Carregando clientes...
-                                </td>
-
-                            </tr>
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
+                    <tbody id="listaClientes">
+                        <tr>
+                            <td
+                                colspan="9"
+                                style="text-align:center; color:#64748b;"
+                            >
+                                Carregando clientes...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
+        </div>
 
-        </main>
+    </main>
+</div>
 
-    </div>
-
-
-    <script src="../js/clientes.js"></script>
-
+<script src="../js/clientes.js"></script>
 </body>
-
 </html>
